@@ -37,81 +37,89 @@ Four sub-tabs for longer-horizon planning:
 
 ```
 budget-dashboard/
-├── app.py                   # Entry point — page config, tabs, title
+├── app.py                    # Entry point — page config, tabs, title
+├── requirements.txt          # Python dependencies for local and cloud deployment
 ├── README.md
-├── SUPABASE_SETUP.md        # Step-by-step guide for Supabase cloud storage setup
+├── SUPABASE_SETUP.md         # Step-by-step guide for Supabase cloud storage setup
+├── archived_data/            # Legacy CSV/Excel sheets (not used by the app)
 ├── data/
-│   ├── current_data.csv     # Local storage for sidebar state snapshots
-│   └── future_data.csv      # Local storage for future savings snapshots
+│   ├── current_data.csv      # Local storage for sidebar state snapshots
+│   └── future_data.csv       # Local storage for future savings snapshots
 └── src/
-    ├── sidebar.py           # Sidebar UI: income, recurring expenses, credit cards, save button
-    ├── tab_current.py       # Tab 1: current-month ledger, chart, summary
-    ├── tab_next.py          # Tab 2: next-month ledger, chart, summary
-    ├── tab_savings.py       # Tab 3: future savings sub-tabs
-    ├── config_io.py         # Persist/load sidebar state (CSV ↔ Supabase)
-    ├── future_io.py         # Persist/load future savings state (CSV ↔ Supabase)
-    └── utils.py             # Shared helpers: formatting, date utilities, ledger builder
+    ├── sidebar.py            # Sidebar UI: income, recurring expenses, credit cards, save button
+    ├── tab_current.py        # Tab 1: current-month ledger, chart, summary
+    ├── tab_next.py           # Tab 2: next-month ledger, chart, summary
+    ├── tab_savings.py        # Tab 3: future savings sub-tabs
+    ├── config_io.py          # Persist/load sidebar state (CSV ↔ Supabase)
+    ├── future_io.py          # Persist/load future savings state (CSV ↔ Supabase)
+    └── utils.py              # Shared helpers: formatting, date utilities, ledger builder
 ```
+
+> `app.py` lives at the root because Streamlit requires the entry point to be runnable from the repo root. It prepends `src/` to `sys.path` at startup so all module imports resolve correctly.
 
 ---
 
 ## ⚙️ Sidebar Configuration
 
-The sidebar is the control panel for the entire dashboard. Changes here flow into both the current-month and next-month tabs.
+The sidebar is the control panel for the entire dashboard. Changes here flow into both the current-month and next-month tabs automatically.
 
 ### 💵 Income
 | Field | Description |
 |---|---|
 | Paycheck Amount | Dollar amount per paycheck |
-| Pay Frequency | Weekly (choose day-of-week) or Monthly (choose day-of-month) |
+| Pay Frequency | **Weekly** — choose the day of the week; **Monthly** — choose the day of the month |
 
 ### 💸 Additional Income *(expandable)*
-Add one-time income items for the current month (bonus, reimbursement, side work) with a description, amount, and day of the month it lands.
+Add one-time income items for the current month (bonus, reimbursement, side work, etc.) — each with a description, amount, and the day of the month it is received.
 
 ### 📉 Recurring Expenses *(expandable)*
-Each item has an **amount** and a **due day of the month**.
+Each item stores an **amount** and a **due day of the month**.
 
-**Housing & Utilities**
+**🏠 Housing & Utilities**
 - Rent, Parking, Gas, Electricity, Water, Sewage
 
-**Bills & Subscriptions**
+**📡 Bills & Subscriptions**
 - Student Loans, Internet, Phone, Insurance, Subscriptions
 
+> **Weekly expenses** — Car Payment and Groceries are also included in both ledgers as recurring weekly outflows. Their amounts are read from `wk_car` and `wk_grocery` in session state (defaults: $150 and $120 respectively). These are currently hardcoded defaults and are not exposed as sidebar inputs.
+
 ### 🧾 Additional One-Time Expenses *(expandable)*
-Non-recurring expenses for the current month (car repair, medical bill, etc.) with a name, amount, and day.
+Non-recurring expenses for the current month (car repair, medical bill, etc.) with a name, amount, and day. These are saved to the snapshot and cleared automatically at month rollover.
 
 ### 💳 Credit Cards *(expandable per card)*
 Each card tracks:
+
 | Field | Description |
 |---|---|
-| Statement Balance | Amount due this month (paid in Tab 1) |
-| Current Balance | Live running balance (leave 0 if same as statement) |
-| Due Day | Day of month the statement is due |
+| Card Name | Display name for the card |
+| Statement Balance | Amount on the last statement — due this month (Tab 1) |
+| Current Balance | Live running balance right now (leave `0` if same as statement) |
+| Due Day | Day of month the statement balance is due |
 
-The difference between **Current Balance − Statement Balance** is automatically treated as a carry-over payment in Tab 2 (next month).
+The difference **Current Balance − Statement Balance** is automatically carried over as an additional payment in Tab 2 (next month). Cards can be added or removed dynamically.
 
 ### 💾 Save All Changes
-Persists the entire sidebar state as a new timestamped snapshot. The active storage backend is shown beneath the button.
+Persists the entire sidebar state as a new timestamped snapshot. The active storage backend (`📄 local CSV` or `☁️ Supabase`) is displayed beneath the button.
 
 ---
 
 ## 🗃️ Data Persistence
 
-The app uses an **append-only snapshot** model — every save creates a new timestamped row and the app always reads the latest one. This means you have a full history of every saved state.
+The app uses an **append-only snapshot** model — every save creates a new timestamped row and the app always reads the most recent one. This gives you a full history of every saved state.
 
 ### Storage Backends
 
 | Environment | Backend | File / Table |
 |---|---|---|
-| Local (default) | CSV | `current_data.csv`, `future_data.csv` |
-| Cloud / Local with secrets | Supabase PostgreSQL | `budget_snapshots`, `future_snapshots` |
+| Local (default) | CSV | `data/current_data.csv`, `data/future_data.csv` |
+| Cloud / Local with secrets configured | Supabase PostgreSQL | `budget_snapshots`, `future_snapshots` |
 
 Backend detection is automatic:
-- If `SUPABASE_URL` is present in `st.secrets` and is not a placeholder, Supabase is used.
-- Otherwise, the app falls back to local CSV files — no configuration needed for local development.
+- If `SUPABASE_URL` is present in `st.secrets` and is **not** a placeholder value, Supabase is used.
+- Otherwise the app falls back to local CSV — no configuration needed for local development.
 
 ### Smart State Restoration
-When the app loads, the latest snapshot is restored into `st.session_state`. Month-specific fields (additional income, one-time expenses) are **automatically cleared** when the saved snapshot is from a prior calendar month, so you start each month with a clean slate while keeping all recurring bills and income settings intact.
+On first load each session, the latest snapshot is restored into `st.session_state`. Month-specific fields (additional income, one-time expenses) are **automatically cleared** when the snapshot originates from a prior calendar month, so you start each month with a clean slate while retaining all recurring bills, income settings, and credit card configuration.
 
 ---
 
@@ -145,7 +153,7 @@ When the app loads, the latest snapshot is restored into `st.session_state`. Mon
 
 ## ☁️ Cloud Storage (Supabase) — Optional
 
-To persist your budget data in the cloud (useful when deploying to Streamlit Community Cloud), follow the full setup instructions in [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md).
+To persist your budget data in the cloud (required when deploying to Streamlit Community Cloud, since the filesystem is ephemeral), follow the full setup guide in [`SUPABASE_SETUP.md`](SUPABASE_SETUP.md).
 
 **Quick summary:**
 
@@ -164,71 +172,105 @@ To persist your budget data in the cloud (useful when deploying to Streamlit Com
 
 ## 🚢 Deploying to Streamlit Community Cloud
 
-1. Push your repo to GitHub (without secrets)
-2. Go to [share.streamlit.io](https://share.streamlit.io) and connect your repo
-3. Set `app.py` as the main file
-4. Add your `SUPABASE_URL` and `SUPABASE_KEY` in **Settings → Secrets**
+1. Push your repo to GitHub (**without** `.streamlit/secrets.toml`)
+2. Go to [share.streamlit.io](https://share.streamlit.io) and connect your repository
+3. Set **`app.py`** as the main file
+4. Go to **Settings → Secrets** and paste your Supabase credentials:
+   ```toml
+   SUPABASE_URL = "https://your-project-id.supabase.co"
+   SUPABASE_KEY = "your-anon-or-service-role-key"
+   ```
 
-The app will automatically use Supabase for storage when deployed.
+The app will automatically detect the Supabase credentials and use cloud storage. Without them it will still run, but any saves will only persist for the current session (Streamlit Cloud has an ephemeral filesystem).
+
+---
+
+## 📝 Recommended `.gitignore`
+
+```gitignore
+# Streamlit secrets (never commit credentials)
+.streamlit/secrets.toml
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local data files (optional — omit if you want to track your CSV history in git)
+data/current_data.csv
+data/future_data.csv
+```
 
 ---
 
 ## 🧱 Module Reference
 
-### `app.py`
-Entry point. Sets page config (`wide` layout, 💰 icon), renders the title and date caption, calls `build_sidebar()`, and creates the three main tabs.
+### `app.py` *(root)*
+Entry point. Prepends `src/` to `sys.path`, sets page config (`wide` layout, 💰 icon), renders the title and date caption, calls `build_sidebar()`, and creates the three main tabs.
 
-### `sidebar.py`
-Renders the full sidebar and initialises all `st.session_state` keys. Loads the latest snapshot from storage on first run. Contains five internal sections: `_section_income`, `_section_additional_income`, `_section_recurring_expenses`, `_section_one_time_expenses`, and `_section_credit_cards`.
+### `src/sidebar.py`
+Renders the full sidebar and initialises all `st.session_state` keys. Loads the latest snapshot from storage once per session. Contains five internal sections:
+- `_section_income` — paycheck amount and pay frequency
+- `_section_additional_income` — expandable one-time income rows
+- `_section_recurring_expenses` — housing/utilities and bills/subscriptions expanders
+- `_section_one_time_expenses` — expandable one-time expense rows
+- `_section_credit_cards` — per-card expanders with statement/current balance inputs
 
-### `tab_current.py`
-Builds the current-month expense list from session state, constructs a daily ledger via `build_ledger()`, overlays an actual-balance projection from today, and renders a Plotly dual-line chart plus a styled DataFrame ledger.
+### `src/tab_current.py`
+Assembles the current month's expense list from session state (paydays, weekly car/grocery expenses, all recurring bills, additional income, one-time expenses, and credit card payments), builds a daily ledger via `build_ledger()`, overlays an actual-balance projection from today's current balance, and renders a Plotly dual-line chart plus a styled DataFrame ledger.
 
-### `tab_next.py`
-Mirrors `tab_current.py` for the following month. Adds an override expander (per-bill amount/day overrides that don't touch sidebar defaults), a one-off expenses expander, and displays a fixed expense breakdown table alongside the ledger.
+### `src/tab_next.py`
+Mirrors `tab_current.py` for the following calendar month. Adds:
+- An override expander (per-bill amount/day adjustments that don't touch sidebar defaults)
+- A one-off expenses expander (pre-seeded with a "Date Night / Fun" example)
+- A fixed expense breakdown table
+- Credit-card carry-over (current − statement) included automatically
 
-### `tab_savings.py`
-Hosts four sub-tabs: Savings Overview, Mortgage Down Payment Calculator, Car Loan Amortization, and 401k Projections. Loads and saves state via `future_io.py`.
+### `src/tab_savings.py`
+Hosts four sub-tabs for longer-horizon planning. Loads defaults from `future_io.py` once per session and provides a **💾 Save Future Savings Defaults** button at the bottom.
 
-### `config_io.py`
-Handles reading and writing the **sidebar / current-month** state. Public API:
-- `load_latest()` — returns the latest snapshot dict (or `None`)
-- `save_current(state)` — persists the current session state
-- `apply_to_state(row)` — writes a snapshot dict into `st.session_state`
-- `is_cloud()` — returns `True` when Supabase is the active backend
+### `src/config_io.py`
+Handles reading and writing the **sidebar / current-month** state. CSV path resolves to `data/current_data.csv` relative to the repo root. Public API:
+- `load_latest()` — returns the latest snapshot dict, or `None`
+- `save_current(state)` — flattens `st.session_state` and appends a new snapshot row
+- `apply_to_state(row)` — writes a snapshot dict into `st.session_state`, respecting month-rollover logic
+- `is_cloud()` — returns `True` when the Supabase backend is active
 
-### `future_io.py`
-Handles reading and writing the **future savings** state. Mirrors `config_io.py` with an identical public API (`load_future_latest`, `save_future`, `apply_future_to_state`) and a separate `FUTURE_DEFAULTS` dict used as fallback values throughout `tab_savings.py`.
+### `src/future_io.py`
+Handles reading and writing the **future savings** state. CSV path resolves to `data/future_data.csv` relative to the repo root. Exports `FUTURE_DEFAULTS` — a dict of fallback values used throughout `tab_savings.py`. Public API mirrors `config_io.py`: `load_future_latest`, `save_future`, `apply_future_to_state`.
 
-### `utils.py`
-Shared utilities:
-- `fmt(val)` — formats a float as a USD string (e.g. `$1,234.56`)
-- `get_days_of_week(year, month, weekday)` — returns all dates in a month that fall on a given weekday
-- `get_paydays(year, month)` — returns payday dates based on sidebar frequency settings
-- `get_weekly_expense_days(year, month, key)` — returns dates for weekly recurring expenses
-- `build_ledger(year, month, expenses, opening_balance)` — builds a day-by-day `pd.DataFrame` ledger with running balance
+### `src/utils.py`
+Shared utilities used across all tab modules:
+- `fmt(val)` — formats a float as a USD string, e.g. `$1,234.56`
+- `get_days_of_week(year, month, weekday)` — returns all dates in a month that fall on a given weekday (0 = Monday … 6 = Sunday)
+- `get_paydays(year, month)` — returns payday dates for a month based on the sidebar's frequency/day settings
+- `get_weekly_expense_days(year, month, key)` — returns all dates in a month matching the weekday stored in `session_state[key]["weekday"]`
+- `build_ledger(year, month, expenses, opening_balance)` — builds a day-by-day `pd.DataFrame` with columns: `Date`, `Day`, `Description`, `Amount`, `Running Balance`
 
 ---
 
 ## 📦 Dependencies
 
-| Package | Purpose |
-|---|---|
-| `streamlit` | UI framework |
-| `pandas` | Data manipulation, CSV I/O |
-| `plotly` | Interactive charts |
-| `supabase` *(optional)* | Cloud storage backend |
+| Package | Version | Purpose |
+|---|---|---|
+| `streamlit` | `==1.55.0` | UI framework |
+| `pandas` | `==2.3.3` | Data manipulation, CSV I/O |
+| `plotly` | `==6.6.0` | Interactive charts (`plotly.express` + `plotly.graph_objects`) |
+| `supabase` | `>=2.0.0` | Cloud storage backend *(optional — only needed with Supabase credentials)* |
+
+All other imports (`sys`, `json`, `os`, `calendar`, `datetime`, `pathlib`) are Python standard library.
 
 ---
 
 ## 🔒 Security Notes
 
 - All data is stored locally in CSV files by default — no account or internet connection required.
-- Supabase credentials are read from `st.secrets` and are never stored in code.
-- The snapshot model means no data is ever overwritten; you can recover any prior state by reading earlier rows from the CSV or Supabase table.
+- Supabase credentials are read exclusively from `st.secrets` and are never stored in source code.
+- The append-only snapshot model means no data is ever overwritten; any prior state can be recovered by reading earlier rows from the CSV or Supabase table.
+- The `supabase` package is imported lazily (inside the function that creates the client), so it is never loaded unless Supabase is actually configured — local installs without the package work without errors.
 
 ---
 
 ## 📄 License
 
 This project is for personal use. Feel free to fork and adapt it for your own budgeting needs.
+
