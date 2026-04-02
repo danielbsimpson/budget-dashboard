@@ -1,0 +1,10 @@
+# ── Core dependencies ─────────────────────────────────────────────────────────
+streamlit==1.55.0
+pandas==2.3.3
+plotly==6.6.0
+
+# ── Optional: Supabase cloud storage backend ──────────────────────────────────
+# Required only when deploying with Supabase credentials in st.secrets.
+# Safe to include on Streamlit Community Cloud — the app falls back to CSV
+# automatically if SUPABASE_URL is not set or is a placeholder value.
+supabase>=2.0.0

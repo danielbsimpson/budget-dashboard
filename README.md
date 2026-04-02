@@ -131,11 +131,7 @@ When the app loads, the latest snapshot is restored into `st.session_state`. Mon
 
 2. **Install dependencies**
    ```bash
-   pip install streamlit pandas plotly
-   ```
-   For Supabase cloud storage (optional):
-   ```bash
-   pip install supabase
+   pip install -r requirements.txt
    ```
 
 3. **Run the app**
