@@ -305,7 +305,7 @@ def tab_next_month() -> None:
     fig.add_hline(y=rec["rec_rent"] + rec["rec_parking"], line_dash="dot",
                   line_color="orange", annotation_text="Rent + Parking")
     fig.update_layout(hovermode="x unified")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     # ── Summary ───────────────────────────────────────────────────────────────
     st.subheader("📊 Next Month Summary")
@@ -346,7 +346,7 @@ def tab_next_month() -> None:
 
     bd_df = pd.DataFrame(breakdown_items, columns=["Item", "Amount"])
     bd_df["Amount"] = bd_df["Amount"].map(lambda v: f"${v:,.2f}")
-    st.dataframe(bd_df, use_container_width=True, hide_index=True)
+    st.dataframe(bd_df, width='stretch', hide_index=True)
 
     # ── Ledger ────────────────────────────────────────────────────────────────
     st.subheader("📒 Daily Ledger")
@@ -365,4 +365,4 @@ def tab_next_month() -> None:
         .map(_color_amount,  subset=["Amount"])
         .format({"Amount": "${:,.2f}", "Running Balance": "${:,.2f}"})
     )
-    st.dataframe(styled, use_container_width=True, height=600)
+    st.dataframe(styled, width='stretch', height=600)

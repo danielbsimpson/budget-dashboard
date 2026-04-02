@@ -54,7 +54,7 @@ def tab_future_savings() -> None:
 
     # ── Save button ──────────────────────────────────────────────────────────
     st.divider()
-    if st.button("💾 Save Future Savings Defaults", key="save_future_btn", use_container_width=True):
+    if st.button("💾 Save Future Savings Defaults", key="save_future_btn", width='stretch'):
         save_future(st.session_state)
         backend = "☁️ Supabase" if _use_supabase() else "📄 future_data.csv"
         st.success(f"✅ Future Savings defaults saved to {backend}!")
@@ -109,7 +109,7 @@ def _savings_overview() -> None:
                "Charles Schwab", "Merrill (TJX)", "Checking"],
         title="Asset Allocation",
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
     st.subheader("Monthly Savings Projections")
     monthly_save = st.number_input("Monthly Savings Amount ($)", value=st.session_state.get("monthly_save", FUTURE_DEFAULTS["monthly_save"]), step=50.0, key="monthly_save")
@@ -127,7 +127,7 @@ def _savings_overview() -> None:
     fig2   = px.line(fut_df, x="Month", y="Projected Savings", markers=True,
                      title=f"Projected Liquid Savings over {months_ahead} months")
     fig2.add_hline(y=goal, line_dash="dash", line_color="green", annotation_text="Goal")
-    st.plotly_chart(fig2, use_container_width=True)
+    st.plotly_chart(fig2, width='stretch')
 
 
 def _mortgage_calculator() -> None:
@@ -159,7 +159,7 @@ def _mortgage_calculator() -> None:
         index=[fmt(pr) for pr in prices],
     )
     dp_table.index.name = "Home Price"
-    st.dataframe(dp_table, use_container_width=True)
+    st.dataframe(dp_table, width='stretch')
 
     today     = date.today()
     save_rows = []
@@ -172,7 +172,7 @@ def _mortgage_calculator() -> None:
     fig3  = px.line(sr_df, x="Month", y=["Saved", "Target"],
                     title="Down Payment Savings Progress",
                     labels={"value": "Amount ($)", "variable": "Series"})
-    st.plotly_chart(fig3, use_container_width=True)
+    st.plotly_chart(fig3, width='stretch')
 
 
 def _car_amortization() -> None:
@@ -220,18 +220,18 @@ def _car_amortization() -> None:
     fig_car = px.area(sched_df, x="Date", y=["Principal", "Interest"],
                       title="Car Loan: Principal vs Interest per Payment",
                       labels={"value": "Amount ($)", "variable": "Component"})
-    st.plotly_chart(fig_car, use_container_width=True)
+    st.plotly_chart(fig_car, width='stretch')
 
     fig_bal = px.line(sched_df, x="Date", y="Remaining Balance",
                       title="Remaining Loan Balance Over Time")
-    st.plotly_chart(fig_bal, use_container_width=True)
+    st.plotly_chart(fig_bal, width='stretch')
 
     st.dataframe(
         sched_df.style.format({
             "Payment": "${:,.2f}", "Interest": "${:,.2f}",
             "Principal": "${:,.2f}", "Remaining Balance": "${:,.2f}",
         }),
-        use_container_width=True, height=400,
+        width='stretch', height=400,
     )
 
 
@@ -331,7 +331,7 @@ def _k401_projections() -> None:
     fig_k = px.area(k_df, x="Age", y="EoY Balance (with growth)",
                     title=f"Projected 401k Growth to Age {int(retire_age)}",
                     labels={"EoY Balance (with growth)": "Balance ($)"})
-    st.plotly_chart(fig_k, use_container_width=True)
+    st.plotly_chart(fig_k, width='stretch')
 
     fig_k2 = px.bar(k_df, x="Age",
                     y=["Employee Contribution", "Employer Match", "Bonus Contribution"],
@@ -348,7 +348,7 @@ def _k401_projections() -> None:
         mode="lines", name="IRS Elective Limit",
         line=dict(color="red", width=2, dash="dash"),
     ))
-    st.plotly_chart(fig_k2, use_container_width=True)
+    st.plotly_chart(fig_k2, width='stretch')
 
     st.dataframe(
         k_df.style.format({
@@ -360,5 +360,5 @@ def _k401_projections() -> None:
             "IRS Limit": "${:,.0f}",
             "EoY Balance (with growth)": "${:,.0f}",
         }),
-        use_container_width=True, height=400,
+        width='stretch', height=400,
     )

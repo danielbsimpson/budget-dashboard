@@ -168,7 +168,7 @@ def _render_chart(df, today: date, month: int, year: int) -> None:
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         yaxis=dict(tickprefix="$", tickformat=",.0f"),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width='stretch')
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -207,7 +207,7 @@ def _render_ledger(df) -> None:
         .map(_color_amount,  subset=["Amount"])
         .format({"Amount": "${:,.2f}", "Running Balance": "${:,.2f}"})
     )
-    st.dataframe(styled, use_container_width=True, height=600)
+    st.dataframe(styled, width='stretch', height=600)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

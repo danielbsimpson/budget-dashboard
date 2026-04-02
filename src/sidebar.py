@@ -288,7 +288,7 @@ def build_sidebar() -> None:
         _section_credit_cards()
         st.divider()
 
-        if st.button("💾 Save All Changes", key="save_all_changes_btn", use_container_width=True):
+        if st.button("💾 Save All Changes", key="save_all_changes_btn", width='stretch'):
             save_current(st.session_state)
             backend = "☁️ Supabase" if is_cloud() else "📄 current_data.csv"
             st.success(f"✅ All changes saved to {backend}!")
