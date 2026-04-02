@@ -207,7 +207,7 @@ def _render_ledger(df) -> None:
         .map(_color_amount,  subset=["Amount"])
         .format({"Amount": "${:,.2f}", "Running Balance": "${:,.2f}"})
     )
-    st.dataframe(styled, width='stretch', height=600)
+    st.dataframe(styled, width='stretch', height=600, hide_index=True)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

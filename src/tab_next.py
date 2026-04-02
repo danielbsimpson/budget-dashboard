@@ -322,31 +322,6 @@ def tab_next_month() -> None:
         shortfall = (rent_total + cc_carry_total) - (nm_opening + total_income)
         st.error(f"⚠️ Shortfall of {fmt(shortfall)} — rent + CC carry-over may not be covered!")
 
-    # ── Fixed expense breakdown ───────────────────────────────────────────────
-    st.subheader("💡 Fixed Expense Breakdown")
-    breakdown_items: list[tuple] = [
-        ("Rent",          rec["rec_rent"]),
-        ("Parking",       rec["rec_parking"]),
-        ("Gas",           rec["rec_gas"]),
-        ("Electricity",   rec["rec_elec"]),
-        ("Water",         rec["rec_water"]),
-        ("Sewage",        rec["rec_sewer"]),
-        ("Internet",      rec["rec_internet"]),
-        ("Phone",         rec["rec_phone"]),
-        ("Student Loans", rec["rec_student"]),
-        ("Insurance",     rec["rec_insurance"]),
-        ("Subscriptions", rec["rec_subs"]),
-    ]
-    for card in cc_cards:
-        stmt  = float(card.get("statement_balance", 0.0))
-        curr  = float(card.get("current_balance",  0.0))
-        carry = max(curr - stmt, 0.0) if curr > 0 else 0.0
-        breakdown_items.append((f"{card['name']} carry-over (current − statement)", carry))
-    breakdown_items.append(("— Total CC carry-over (due next month)", cc_carry_total))
-
-    bd_df = pd.DataFrame(breakdown_items, columns=["Item", "Amount"])
-    bd_df["Amount"] = bd_df["Amount"].map(lambda v: f"${v:,.2f}")
-    st.dataframe(bd_df, width='stretch', hide_index=True)
 
     # ── Ledger ────────────────────────────────────────────────────────────────
     st.subheader("📒 Daily Ledger")
@@ -365,4 +340,31 @@ def tab_next_month() -> None:
         .map(_color_amount,  subset=["Amount"])
         .format({"Amount": "${:,.2f}", "Running Balance": "${:,.2f}"})
     )
-    st.dataframe(styled, width='stretch', height=600)
+    st.dataframe(styled, width='stretch', height=600, hide_index=True)
+
+    # ── Fixed expense breakdown ───────────────────────────────────────────────
+    with st.expander("💡 Fixed Expense Breakdown", expanded=False):
+        breakdown_items: list[tuple] = [
+            ("Rent",          rec["rec_rent"]),
+            ("Parking",       rec["rec_parking"]),
+            ("Gas",           rec["rec_gas"]),
+            ("Electricity",   rec["rec_elec"]),
+            ("Water",         rec["rec_water"]),
+            ("Sewage",        rec["rec_sewer"]),
+            ("Internet",      rec["rec_internet"]),
+            ("Phone",         rec["rec_phone"]),
+            ("Student Loans", rec["rec_student"]),
+            ("Insurance",     rec["rec_insurance"]),
+            ("Subscriptions", rec["rec_subs"]),
+        ]
+        for card in cc_cards:
+            stmt  = float(card.get("statement_balance", 0.0))
+            curr  = float(card.get("current_balance",  0.0))
+            carry = max(curr - stmt, 0.0) if curr > 0 else 0.0
+            breakdown_items.append((f"{card['name']} carry-over (current − statement)", carry))
+        breakdown_items.append(("— Total CC carry-over (due next month)", cc_carry_total))
+
+        bd_df = pd.DataFrame(breakdown_items, columns=["Item", "Amount"])
+        bd_df["Amount"] = bd_df["Amount"].map(lambda v: f"${v:,.2f}")
+        st.dataframe(bd_df, width='stretch', hide_index=True)
+
