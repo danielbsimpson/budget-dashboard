@@ -114,7 +114,7 @@ def _savings_overview() -> None:
                "Charles Schwab", "Merrill (TJX)", "Checking"],
         title="Asset Allocation",
     )
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, width='stretch', key="chart_savings_pie")
 
     st.subheader("Monthly Savings Projections")
     monthly_save = st.number_input("Monthly Savings Amount ($)", value=st.session_state.get("monthly_save", FUTURE_DEFAULTS["monthly_save"]), step=50.0, key="monthly_save")
@@ -132,7 +132,7 @@ def _savings_overview() -> None:
     fig2   = px.line(fut_df, x="Month", y="Projected Savings", markers=True,
                      title=f"Projected Liquid Savings over {months_ahead} months")
     fig2.add_hline(y=goal, line_dash="dash", line_color="green", annotation_text="Goal")
-    st.plotly_chart(fig2, width='stretch')
+    st.plotly_chart(fig2, width='stretch', key="chart_savings_projection")
 
 
 def _mortgage_calculator() -> None:
@@ -177,7 +177,7 @@ def _mortgage_calculator() -> None:
     fig3  = px.line(sr_df, x="Month", y=["Saved", "Target"],
                     title="Down Payment Savings Progress",
                     labels={"value": "Amount ($)", "variable": "Series"})
-    st.plotly_chart(fig3, width='stretch')
+    st.plotly_chart(fig3, width='stretch', key="chart_mortgage_savings")
 
 
 def _car_amortization() -> None:
@@ -225,11 +225,11 @@ def _car_amortization() -> None:
     fig_car = px.area(sched_df, x="Date", y=["Principal", "Interest"],
                       title="Car Loan: Principal vs Interest per Payment",
                       labels={"value": "Amount ($)", "variable": "Component"})
-    st.plotly_chart(fig_car, width='stretch')
+    st.plotly_chart(fig_car, width='stretch', key="chart_car_amort")
 
     fig_bal = px.line(sched_df, x="Date", y="Remaining Balance",
                       title="Remaining Loan Balance Over Time")
-    st.plotly_chart(fig_bal, width='stretch')
+    st.plotly_chart(fig_bal, width='stretch', key="chart_car_balance")
 
     st.dataframe(
         sched_df.style.format({
@@ -336,7 +336,7 @@ def _k401_projections() -> None:
     fig_k = px.area(k_df, x="Age", y="EoY Balance (with growth)",
                     title=f"Projected 401k Growth to Age {int(retire_age)}",
                     labels={"EoY Balance (with growth)": "Balance ($)"})
-    st.plotly_chart(fig_k, width='stretch')
+    st.plotly_chart(fig_k, width='stretch', key="chart_k401_growth")
 
     fig_k2 = px.bar(k_df, x="Age",
                     y=["Employee Contribution", "Employer Match", "Bonus Contribution"],
@@ -353,7 +353,7 @@ def _k401_projections() -> None:
         mode="lines", name="IRS Elective Limit",
         line=dict(color="red", width=2, dash="dash"),
     ))
-    st.plotly_chart(fig_k2, width='stretch')
+    st.plotly_chart(fig_k2, width='stretch', key="chart_k401_contrib")
 
     st.dataframe(
         k_df.style.format({
@@ -518,7 +518,7 @@ def _student_loans() -> None:
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         yaxis=dict(tickprefix="$", tickformat=",.0f"),
     )
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, width='stretch', key="chart_sl_balance")
 
     # ── Interest vs Principal stacked bar ─────────────────────────────────────
     st.subheader("📊 Interest vs. Principal — Combined")
@@ -540,137 +540,7 @@ def _student_loans() -> None:
         hovermode="x unified",
         yaxis=dict(tickprefix="$", tickformat=",.0f"),
     )
-    st.plotly_chart(fig2, width='stretch')
-
-    # ── Per-loan amortization tables ──────────────────────────────────────────
-    with st.expander("📋 Loan 1 Amortization — Direct Grad PLUS", expanded=False):
-        st.dataframe(
-            df1.style.format({
-                "Payment": "${:,.2f}", "Interest": "${:,.2f}",
-                "Principal": "${:,.2f}", "Remaining Balance": "${:,.2f}",
-            }),
-            width='stretch', height=400, hide_index=True,
-        )
-
-    with st.expander("📋 Loan 2 Amortization — Direct Loan – Unsubsidized", expanded=False):
-        st.dataframe(
-            df2.style.format({
-                "Payment": "${:,.2f}", "Interest": "${:,.2f}",
-                "Principal": "${:,.2f}", "Remaining Balance": "${:,.2f}",
-            }),
-            width='stretch', height=400, hide_index=True,
-        )
-
-    # ── Amortization helper ───────────────────────────────────────────────────
-    def _amortize(balance: float, annual_rate: float, monthly_payment: float) -> list[dict]:
-        rows = []
-        monthly_rate = annual_rate / 100 / 12
-        cur = date.today().replace(day=1)
-        month_num = 0
-        while balance > 0.001:
-            month_num += 1
-            interest  = round(balance * monthly_rate, 2)
-            payment   = min(monthly_payment, balance + interest)
-            principal = round(payment - interest, 2)
-            balance   = round(max(balance - principal, 0.0), 2)
-            rows.append({
-                "Month":             month_num,
-                "Date":              cur.strftime("%b %Y"),
-                "Payment":           payment,
-                "Interest":          interest,
-                "Principal":         principal,
-                "Remaining Balance": balance,
-            })
-            # advance one month
-            if cur.month == 12:
-                cur = date(cur.year + 1, 1, 1)
-            else:
-                cur = cur.replace(month=cur.month + 1)
-            if month_num > 600:
-                break
-        return rows
-
-    rows1 = _amortize(bal1, rate1, pay1)
-    rows2 = _amortize(bal2, rate2, pay2)
-    df1   = pd.DataFrame(rows1)
-    df2   = pd.DataFrame(rows2)
-
-    # ── Summary metrics ───────────────────────────────────────────────────────
-    st.divider()
-    mc1, mc2, mc3, mc4 = st.columns(4)
-    mc1.metric("Combined Balance",        fmt(bal1 + bal2))
-    mc2.metric("Total Interest (Loan 1)", fmt(df1["Interest"].sum()))
-    mc3.metric("Total Interest (Loan 2)", fmt(df2["Interest"].sum()))
-    mc4.metric("Total Interest Paid",     fmt(df1["Interest"].sum() + df2["Interest"].sum()))
-
-    payoff1 = df1.iloc[-1]["Date"] if not df1.empty else "—"
-    payoff2 = df2.iloc[-1]["Date"] if not df2.empty else "—"
-    pm1, pm2, pm3 = st.columns(3)
-    pm1.metric("Loan 1 Payoff",  payoff1, f"{len(df1)} months")
-    pm2.metric("Loan 2 Payoff",  payoff2, f"{len(df2)} months")
-    last_payoff = df1.iloc[-1]["Date"] if len(df1) >= len(df2) else df2.iloc[-1]["Date"]
-    pm3.metric("Debt-Free Date", last_payoff)
-
-    # ── Combined balance-over-time chart ──────────────────────────────────────
-    st.subheader("📉 Remaining Balance Over Time")
-
-    # Align both series to the same month index
-    max_months = max(len(df1), len(df2))
-    dates      = df1["Date"].tolist() if len(df1) >= len(df2) else df2["Date"].tolist()
-
-    bal1_series = df1["Remaining Balance"].tolist() + [0.0] * (max_months - len(df1))
-    bal2_series = df2["Remaining Balance"].tolist() + [0.0] * (max_months - len(df2))
-    combined    = [a + b for a, b in zip(bal1_series, bal2_series)]
-
-    fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=dates, y=bal1_series,
-        mode="lines", name="Direct Grad PLUS",
-        line=dict(color="#1f77b4", width=2),
-        hovertemplate="%{x}: <b>%{y:$,.2f}</b><extra>Grad PLUS</extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=dates, y=bal2_series,
-        mode="lines", name="Direct Unsubsidized",
-        line=dict(color="#ff7f0e", width=2),
-        hovertemplate="%{x}: <b>%{y:$,.2f}</b><extra>Unsubsidized</extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=dates, y=combined,
-        mode="lines", name="Combined",
-        line=dict(color="#2ca02c", width=3, dash="dot"),
-        hovertemplate="%{x}: <b>%{y:$,.2f}</b><extra>Combined</extra>",
-    ))
-    fig.add_hline(y=0, line_dash="dash", line_color="red", annotation_text="$0")
-    fig.update_layout(
-        xaxis_title="Month", yaxis_title="Remaining Balance ($)",
-        hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
-        yaxis=dict(tickprefix="$", tickformat=",.0f"),
-    )
-    st.plotly_chart(fig, width='stretch')
-
-    # ── Interest vs Principal area chart ─────────────────────────────────────
-    st.subheader("📊 Interest vs. Principal — Combined")
-    int_series  = [
-        (df1.loc[df1["Month"] == m, "Interest"].values[0]  if m <= len(df1)  else 0.0) +
-        (df2.loc[df2["Month"] == m, "Interest"].values[0]  if m <= len(df2)  else 0.0)
-        for m in range(1, max_months + 1)
-    ]
-    prin_series = [
-        (df1.loc[df1["Month"] == m, "Principal"].values[0] if m <= len(df1)  else 0.0) +
-        (df2.loc[df2["Month"] == m, "Principal"].values[0] if m <= len(df2)  else 0.0)
-        for m in range(1, max_months + 1)
-    ]
-    fig2 = go.Figure()
-    fig2.add_trace(go.Bar(x=dates, y=int_series,  name="Interest",  marker_color="#d62728"))
-    fig2.add_trace(go.Bar(x=dates, y=prin_series, name="Principal", marker_color="#2ca02c"))
-    fig2.update_layout(
-        barmode="stack", xaxis_title="Month", yaxis_title="Amount ($)",
-        hovermode="x unified",
-        yaxis=dict(tickprefix="$", tickformat=",.0f"),
-    )
-    st.plotly_chart(fig2, width='stretch')
+    st.plotly_chart(fig2, width='stretch', key="chart_sl_interest")
 
     # ── Per-loan amortization tables ──────────────────────────────────────────
     with st.expander("📋 Loan 1 Amortization — Direct Grad PLUS", expanded=False):

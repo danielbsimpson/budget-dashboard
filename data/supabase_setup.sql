@@ -69,7 +69,8 @@ alter table public.budget_snapshots disable row level security;
 
 -- =============================================================================
 -- SECTION 2 — future_snapshots
--- Stores Future Savings tab state: savings accounts, mortgage, car loan, 401k.
+-- Stores Future Savings tab state: savings accounts, mortgage, car loan,
+-- 401k projections, and student loan payoff planner.
 -- =============================================================================
 
 create table if not exists public.future_snapshots (
@@ -108,7 +109,15 @@ create table if not exists public.future_snapshots (
     k401_growth      integer      not null default 6,   -- assumed annual growth %
     k401_bonus       numeric      not null default 0,   -- annual bonus contribution
     k401_age         integer      not null default 30,
-    k401_retire      integer      not null default 65
+    k401_retire      integer      not null default 65,
+
+    -- ── Student Loans ─────────────────────────────────────────────────────────
+    sl_bal1          numeric      not null default 6561.77,   -- Loan 1 (Direct Grad PLUS) balance
+    sl_rate1         numeric      not null default 6.83,      -- Loan 1 annual interest rate %
+    sl_bal2          numeric      not null default 14031.70,  -- Loan 2 (Direct Unsubsidized) balance
+    sl_rate2         numeric      not null default 5.83,      -- Loan 2 annual interest rate %
+    sl_pay1          numeric      not null default 226.77     -- monthly payment allocated to Loan 1
+                                                             -- (Loan 2 payment = total - sl_pay1)
 );
 
 alter table public.future_snapshots disable row level security;
@@ -176,39 +185,23 @@ insert into public.budget_snapshots (
 
 -- =============================================================================
 -- SECTION 4 — Seed future_snapshots
--- Values taken from the latest row of future_data.csv (2026-04-02T13:03:11).
+-- Values taken from the latest row of future_data.csv (2026-04-02T14:00:00),
+-- including all student loan fields.
 -- =============================================================================
 
 insert into public.future_snapshots (
     saved_at,
-    ally,
-    burke,
-    rh,
-    schwab,
-    merill,
-    sav_checking,
-    sav_goal,
-    monthly_save,
-    sav_months,
-    hp,
-    dp_pct,
-    dp_saved,
-    dp_monthly,
-    car_bal,
-    car_rate,
-    car_pay,
-    car_extra,
-    car_start,
-    k401_cur,
-    k401_sal,
-    k401_pct,
-    k401_emp,
-    k401_growth,
-    k401_bonus,
-    k401_age,
-    k401_retire
+    ally, burke, rh, schwab, merill,
+    sav_checking, sav_goal, monthly_save, sav_months,
+    hp, dp_pct, dp_saved, dp_monthly,
+    car_bal, car_rate, car_pay, car_extra, car_start,
+    k401_cur, k401_sal, k401_pct, k401_emp,
+    k401_growth, k401_bonus, k401_age, k401_retire,
+    sl_bal1, sl_rate1,
+    sl_bal2, sl_rate2,
+    sl_pay1
 ) values (
-    '2026-04-02T13:03:11',
+    '2026-04-02T14:00:00',
     1025.00,               -- ally savings
     6000.00,               -- burke savings
     843.00,                -- robinhood
@@ -234,7 +227,12 @@ insert into public.future_snapshots (
     6,                     -- assumed annual growth %
     3000.00,               -- annual bonus contribution to 401k
     36,                    -- current age
-    65                     -- target retirement age
+    65,                    -- target retirement age
+    6561.77,               -- Loan 1 (Direct Grad PLUS) balance
+    6.83,                  -- Loan 1 annual interest rate %
+    14031.70,              -- Loan 2 (Direct Unsubsidized) balance
+    5.83,                  -- Loan 2 annual interest rate %
+    226.77                 -- monthly payment to Loan 1 ($195.33 auto-assigned to Loan 2)
 );
 
 

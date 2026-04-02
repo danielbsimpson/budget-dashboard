@@ -168,7 +168,7 @@ def _render_chart(df, today: date, month: int, year: int) -> None:
         legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
         yaxis=dict(tickprefix="$", tickformat=",.0f"),
     )
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, width='stretch', key="chart_current_balance")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

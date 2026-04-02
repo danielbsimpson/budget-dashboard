@@ -305,7 +305,7 @@ def tab_next_month() -> None:
     fig.add_hline(y=rec["rec_rent"] + rec["rec_parking"], line_dash="dot",
                   line_color="orange", annotation_text="Rent + Parking")
     fig.update_layout(hovermode="x unified")
-    st.plotly_chart(fig, width='stretch')
+    st.plotly_chart(fig, width='stretch', key="chart_next_balance")
 
     # ── Summary ───────────────────────────────────────────────────────────────
     st.subheader("📊 Next Month Summary")
