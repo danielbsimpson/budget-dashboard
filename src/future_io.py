@@ -70,6 +70,9 @@ FUTURE_COLS = [
     # 401k
     "k401_cur", "k401_sal", "k401_pct", "k401_emp",
     "k401_growth", "k401_bonus", "k401_age", "k401_retire",
+    # Student Loans
+    "sl_bal1", "sl_rate1",
+    "sl_bal2", "sl_rate2",
 ]
 
 # Default values (mirrors hardcoded values in tab_savings.py)
@@ -100,6 +103,13 @@ FUTURE_DEFAULTS: dict = {
     "k401_bonus":  5000.0,
     "k401_age":       36,
     "k401_retire":    65,
+    # Student Loans
+    # Loan 1: Direct Grad PLUS
+    "sl_bal1":   6561.77,
+    "sl_rate1":     6.83,
+    # Loan 2: Direct Loan - Unsubsidized
+    "sl_bal2":  14031.70,
+    "sl_rate2":     5.83,
 }
 
 
@@ -268,6 +278,11 @@ def apply_future_to_state(row: dict) -> None:
         "k401_bonus":   (_float, FUTURE_DEFAULTS["k401_bonus"]),
         "k401_age":     (_int,   FUTURE_DEFAULTS["k401_age"]),
         "k401_retire":  (_int,   FUTURE_DEFAULTS["k401_retire"]),
+        # Student Loans
+        "sl_bal1":      (_float, FUTURE_DEFAULTS["sl_bal1"]),
+        "sl_rate1":     (_float, FUTURE_DEFAULTS["sl_rate1"]),
+        "sl_bal2":      (_float, FUTURE_DEFAULTS["sl_bal2"]),
+        "sl_rate2":     (_float, FUTURE_DEFAULTS["sl_rate2"]),
     }
 
     for key, (converter, default) in mapping.items():
