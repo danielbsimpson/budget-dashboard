@@ -1,3 +1,9 @@
+import sys
+from pathlib import Path
+
+# Allow imports from the src/ package directory
+sys.path.insert(0, str(Path(__file__).parent / "src"))
+
 import streamlit as st
 from datetime import date
 

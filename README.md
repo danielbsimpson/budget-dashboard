@@ -37,17 +37,20 @@ Four sub-tabs for longer-horizon planning:
 
 ```
 budget-dashboard/
-├── app.py              # Entry point — page config, tabs, title
-├── sidebar.py          # Sidebar UI: income, recurring expenses, credit cards, save button
-├── tab_current.py      # Tab 1: current-month ledger, chart, summary
-├── tab_next.py         # Tab 2: next-month ledger, chart, summary
-├── tab_savings.py      # Tab 3: future savings sub-tabs
-├── config_io.py        # Persist/load sidebar state (CSV ↔ Supabase)
-├── future_io.py        # Persist/load future savings state (CSV ↔ Supabase)
-├── utils.py            # Shared helpers: formatting, date utilities, ledger builder
-├── current_data.csv    # Local storage for sidebar state snapshots
-├── future_data.csv     # Local storage for future savings snapshots
-└── SUPABASE_SETUP.md   # Step-by-step guide for Supabase cloud storage setup
+├── app.py                   # Entry point — page config, tabs, title
+├── README.md
+├── SUPABASE_SETUP.md        # Step-by-step guide for Supabase cloud storage setup
+├── data/
+│   ├── current_data.csv     # Local storage for sidebar state snapshots
+│   └── future_data.csv      # Local storage for future savings snapshots
+└── src/
+    ├── sidebar.py           # Sidebar UI: income, recurring expenses, credit cards, save button
+    ├── tab_current.py       # Tab 1: current-month ledger, chart, summary
+    ├── tab_next.py          # Tab 2: next-month ledger, chart, summary
+    ├── tab_savings.py       # Tab 3: future savings sub-tabs
+    ├── config_io.py         # Persist/load sidebar state (CSV ↔ Supabase)
+    ├── future_io.py         # Persist/load future savings state (CSV ↔ Supabase)
+    └── utils.py             # Shared helpers: formatting, date utilities, ledger builder
 ```
 
 ---
