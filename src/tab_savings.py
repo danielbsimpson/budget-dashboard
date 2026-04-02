@@ -374,42 +374,192 @@ def _student_loans() -> None:
     import plotly.graph_objects as go
     from datetime import date
 
-    # ── Payment split proportions (based on current $423/mo allocation) ──────
-    # Direct Grad PLUS:       $226.77 / $423.00 = 53.61%
-    # Direct Unsubsidized:    $195.33 / $423.00 = 46.39%
-    SPLIT_LOAN1 = 226.77 / 423.00   # Direct Grad PLUS proportion
-    SPLIT_LOAN2 = 195.33 / 423.00   # Direct Unsubsidized proportion
-
     st.subheader("🎓 Student Loan Payoff Planner")
-    st.caption(
-        "Monthly payment is pulled from **Student Loans** in the sidebar. "
-        "It is split proportionally between both loans "
-        f"({SPLIT_LOAN1*100:.1f}% / {SPLIT_LOAN2*100:.1f}%) based on your current allocation. "
-        "Adjust balances or rates below if they have changed."
-    )
 
-    # ── Loan inputs ───────────────────────────────────────────────────────────
+    # ── Total payment comes from sidebar ─────────────────────────────────────
     total_payment = float(st.session_state.get("rec_student", {}).get("amount", 423.00))
-
-    col1, col2 = st.columns(2)
-    with col1:
-        st.markdown("**Loan 1 — Direct Grad PLUS**")
-        bal1  = st.number_input("Current Balance ($)",    value=st.session_state.get("sl_bal1",  FUTURE_DEFAULTS["sl_bal1"]),  step=10.0, format="%.2f", key="sl_bal1")
-        rate1 = st.number_input("Annual Interest Rate (%)", value=st.session_state.get("sl_rate1", FUTURE_DEFAULTS["sl_rate1"]), step=0.01, format="%.3f", key="sl_rate1")
-        pay1  = round(total_payment * SPLIT_LOAN1, 2)
-        st.caption(f"Monthly payment: **{fmt(pay1)}** ({SPLIT_LOAN1*100:.1f}% of {fmt(total_payment)})")
-
-    with col2:
-        st.markdown("**Loan 2 — Direct Loan – Unsubsidized**")
-        bal2  = st.number_input("Current Balance ($)",    value=st.session_state.get("sl_bal2",  FUTURE_DEFAULTS["sl_bal2"]),  step=10.0, format="%.2f", key="sl_bal2")
-        rate2 = st.number_input("Annual Interest Rate (%)", value=st.session_state.get("sl_rate2", FUTURE_DEFAULTS["sl_rate2"]), step=0.01, format="%.3f", key="sl_rate2")
-        pay2  = round(total_payment * SPLIT_LOAN2, 2)
-        st.caption(f"Monthly payment: **{fmt(pay2)}** ({SPLIT_LOAN2*100:.1f}% of {fmt(total_payment)})")
 
     st.info(
         f"💳 Total monthly student loan payment: **{fmt(total_payment)}** "
-        f"(from sidebar → Bills & Subscriptions → Student Loans)"
+        f"(from sidebar → Bills & Subscriptions → Student Loans). "
+        f"Adjust the split below if your allocation changes."
     )
+
+    # ── Loan inputs ───────────────────────────────────────────────────────────
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("**Loan 1 — Direct Grad PLUS**")
+        bal1  = st.number_input(
+            "Current Balance ($)",
+            value=st.session_state.get("sl_bal1",  FUTURE_DEFAULTS["sl_bal1"]),
+            step=10.0, format="%.2f", key="sl_bal1",
+        )
+        rate1 = st.number_input(
+            "Annual Interest Rate (%)",
+            value=st.session_state.get("sl_rate1", FUTURE_DEFAULTS["sl_rate1"]),
+            step=0.001, format="%.3f", key="sl_rate1",
+        )
+        pay1 = st.number_input(
+            "Monthly Payment ($)",
+            value=st.session_state.get("sl_pay1", FUTURE_DEFAULTS["sl_pay1"]),
+            min_value=0.01,
+            max_value=float(total_payment),
+            step=1.0, format="%.2f", key="sl_pay1",
+            help="Amount applied to Loan 1 each month. Remainder goes to Loan 2.",
+        )
+
+    with col2:
+        st.markdown("**Loan 2 — Direct Loan – Unsubsidized**")
+        bal2  = st.number_input(
+            "Current Balance ($)",
+            value=st.session_state.get("sl_bal2",  FUTURE_DEFAULTS["sl_bal2"]),
+            step=10.0, format="%.2f", key="sl_bal2",
+        )
+        rate2 = st.number_input(
+            "Annual Interest Rate (%)",
+            value=st.session_state.get("sl_rate2", FUTURE_DEFAULTS["sl_rate2"]),
+            step=0.001, format="%.3f", key="sl_rate2",
+        )
+        pay2 = round(total_payment - pay1, 2)
+        pct1 = (pay1 / total_payment * 100) if total_payment > 0 else 0.0
+        pct2 = 100.0 - pct1
+        st.metric(
+            "Monthly Payment ($)",
+            fmt(pay2),
+            help="Automatically set to total payment minus Loan 1 allocation.",
+        )
+        st.caption(
+            f"Split: **{fmt(pay1)}** ({pct1:.1f}%) → Loan 1 · "
+            f"**{fmt(pay2)}** ({pct2:.1f}%) → Loan 2"
+        )
+
+    # ── Amortization helper ───────────────────────────────────────────────────
+    def _amortize(balance: float, annual_rate: float, monthly_payment: float) -> list[dict]:
+        rows = []
+        monthly_rate = annual_rate / 100 / 12
+        cur = date.today().replace(day=1)
+        month_num = 0
+        while balance > 0.001:
+            month_num += 1
+            interest  = round(balance * monthly_rate, 2)
+            payment   = min(monthly_payment, balance + interest)
+            principal = round(payment - interest, 2)
+            balance   = round(max(balance - principal, 0.0), 2)
+            rows.append({
+                "Month":             month_num,
+                "Date":              cur.strftime("%b %Y"),
+                "Payment":           payment,
+                "Interest":          interest,
+                "Principal":         principal,
+                "Remaining Balance": balance,
+            })
+            if cur.month == 12:
+                cur = date(cur.year + 1, 1, 1)
+            else:
+                cur = cur.replace(month=cur.month + 1)
+            if month_num > 600:
+                break
+        return rows
+
+    rows1 = _amortize(bal1, rate1, pay1)
+    rows2 = _amortize(bal2, rate2, pay2)
+    df1   = pd.DataFrame(rows1)
+    df2   = pd.DataFrame(rows2)
+
+    # ── Summary metrics ───────────────────────────────────────────────────────
+    st.divider()
+    mc1, mc2, mc3, mc4 = st.columns(4)
+    mc1.metric("Combined Balance",        fmt(bal1 + bal2))
+    mc2.metric("Total Interest (Loan 1)", fmt(df1["Interest"].sum()))
+    mc3.metric("Total Interest (Loan 2)", fmt(df2["Interest"].sum()))
+    mc4.metric("Total Interest Paid",     fmt(df1["Interest"].sum() + df2["Interest"].sum()))
+
+    payoff1 = df1.iloc[-1]["Date"] if not df1.empty else "—"
+    payoff2 = df2.iloc[-1]["Date"] if not df2.empty else "—"
+    pm1, pm2, pm3 = st.columns(3)
+    pm1.metric("Loan 1 Payoff",  payoff1, f"{len(df1)} months")
+    pm2.metric("Loan 2 Payoff",  payoff2, f"{len(df2)} months")
+    last_payoff = df1.iloc[-1]["Date"] if len(df1) >= len(df2) else df2.iloc[-1]["Date"]
+    pm3.metric("Debt-Free Date", last_payoff)
+
+    # ── Combined balance-over-time chart ──────────────────────────────────────
+    st.subheader("� Remaining Balance Over Time")
+
+    max_months  = max(len(df1), len(df2))
+    dates       = df1["Date"].tolist() if len(df1) >= len(df2) else df2["Date"].tolist()
+    bal1_series = df1["Remaining Balance"].tolist() + [0.0] * (max_months - len(df1))
+    bal2_series = df2["Remaining Balance"].tolist() + [0.0] * (max_months - len(df2))
+    combined    = [a + b for a, b in zip(bal1_series, bal2_series)]
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=dates, y=bal1_series,
+        mode="lines", name="Direct Grad PLUS",
+        line=dict(color="#1f77b4", width=2),
+        hovertemplate="%{x}: <b>%{y:$,.2f}</b><extra>Grad PLUS</extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=dates, y=bal2_series,
+        mode="lines", name="Direct Unsubsidized",
+        line=dict(color="#ff7f0e", width=2),
+        hovertemplate="%{x}: <b>%{y:$,.2f}</b><extra>Unsubsidized</extra>",
+    ))
+    fig.add_trace(go.Scatter(
+        x=dates, y=combined,
+        mode="lines", name="Combined",
+        line=dict(color="#2ca02c", width=3, dash="dot"),
+        hovertemplate="%{x}: <b>%{y:$,.2f}</b><extra>Combined</extra>",
+    ))
+    fig.add_hline(y=0, line_dash="dash", line_color="red", annotation_text="$0")
+    fig.update_layout(
+        xaxis_title="Month", yaxis_title="Remaining Balance ($)",
+        hovermode="x unified",
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0),
+        yaxis=dict(tickprefix="$", tickformat=",.0f"),
+    )
+    st.plotly_chart(fig, width='stretch')
+
+    # ── Interest vs Principal stacked bar ─────────────────────────────────────
+    st.subheader("📊 Interest vs. Principal — Combined")
+    int_series  = [
+        (df1.loc[df1["Month"] == m, "Interest"].values[0]  if m <= len(df1) else 0.0) +
+        (df2.loc[df2["Month"] == m, "Interest"].values[0]  if m <= len(df2) else 0.0)
+        for m in range(1, max_months + 1)
+    ]
+    prin_series = [
+        (df1.loc[df1["Month"] == m, "Principal"].values[0] if m <= len(df1) else 0.0) +
+        (df2.loc[df2["Month"] == m, "Principal"].values[0] if m <= len(df2) else 0.0)
+        for m in range(1, max_months + 1)
+    ]
+    fig2 = go.Figure()
+    fig2.add_trace(go.Bar(x=dates, y=int_series,  name="Interest",  marker_color="#d62728"))
+    fig2.add_trace(go.Bar(x=dates, y=prin_series, name="Principal", marker_color="#2ca02c"))
+    fig2.update_layout(
+        barmode="stack", xaxis_title="Month", yaxis_title="Amount ($)",
+        hovermode="x unified",
+        yaxis=dict(tickprefix="$", tickformat=",.0f"),
+    )
+    st.plotly_chart(fig2, width='stretch')
+
+    # ── Per-loan amortization tables ──────────────────────────────────────────
+    with st.expander("📋 Loan 1 Amortization — Direct Grad PLUS", expanded=False):
+        st.dataframe(
+            df1.style.format({
+                "Payment": "${:,.2f}", "Interest": "${:,.2f}",
+                "Principal": "${:,.2f}", "Remaining Balance": "${:,.2f}",
+            }),
+            width='stretch', height=400, hide_index=True,
+        )
+
+    with st.expander("📋 Loan 2 Amortization — Direct Loan – Unsubsidized", expanded=False):
+        st.dataframe(
+            df2.style.format({
+                "Payment": "${:,.2f}", "Interest": "${:,.2f}",
+                "Principal": "${:,.2f}", "Remaining Balance": "${:,.2f}",
+            }),
+            width='stretch', height=400, hide_index=True,
+        )
 
     # ── Amortization helper ───────────────────────────────────────────────────
     def _amortize(balance: float, annual_rate: float, monthly_payment: float) -> list[dict]:

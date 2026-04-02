@@ -41,6 +41,13 @@ Column reference:
   k401_bonus            – float
   k401_age              – int
   k401_retire           – int
+
+  -- Student Loans --
+  sl_bal1               – float  (Loan 1: Direct Grad PLUS current balance)
+  sl_rate1              – float  (Loan 1: annual interest rate %)
+  sl_bal2               – float  (Loan 2: Direct Unsubsidized current balance)
+  sl_rate2              – float  (Loan 2: annual interest rate %)
+  sl_pay1               – float  (monthly payment allocated to Loan 1; remainder goes to Loan 2)
 """
 from __future__ import annotations
 
@@ -73,6 +80,7 @@ FUTURE_COLS = [
     # Student Loans
     "sl_bal1", "sl_rate1",
     "sl_bal2", "sl_rate2",
+    "sl_pay1",
 ]
 
 # Default values (mirrors hardcoded values in tab_savings.py)
@@ -110,6 +118,8 @@ FUTURE_DEFAULTS: dict = {
     # Loan 2: Direct Loan - Unsubsidized
     "sl_bal2":  14031.70,
     "sl_rate2":     5.83,
+    # Monthly payment allocated to Loan 1 (remainder auto-assigned to Loan 2)
+    "sl_pay1":    226.77,
 }
 
 
@@ -283,6 +293,7 @@ def apply_future_to_state(row: dict) -> None:
         "sl_rate1":     (_float, FUTURE_DEFAULTS["sl_rate1"]),
         "sl_bal2":      (_float, FUTURE_DEFAULTS["sl_bal2"]),
         "sl_rate2":     (_float, FUTURE_DEFAULTS["sl_rate2"]),
+        "sl_pay1":      (_float, FUTURE_DEFAULTS["sl_pay1"]),
     }
 
     for key, (converter, default) in mapping.items():
