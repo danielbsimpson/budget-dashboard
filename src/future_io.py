@@ -57,6 +57,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+from utils import now_eastern
 
 FUTURE_PATH     = Path(__file__).parent.parent / "data" / "future_data.csv"
 _SUPA_TABLE     = "future_snapshots"
@@ -147,7 +148,7 @@ def _supabase_client():
 
 def _build_snapshot(state) -> dict:
     """Flatten the Future Savings session_state keys into one storable dict."""
-    row: dict = {"saved_at": datetime.now().isoformat(timespec="seconds")}
+    row: dict = {"saved_at": now_eastern().isoformat(timespec="seconds")}
     for key in FUTURE_COLS[1:]:          # skip "saved_at"
         val = state.get(key, FUTURE_DEFAULTS.get(key))
         # date_input widgets return a date object; store as ISO string

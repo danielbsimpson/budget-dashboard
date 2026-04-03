@@ -11,7 +11,7 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from sidebar import REC_DEFAULTS
-from utils import build_ledger, fmt, get_paydays, get_weekly_expense_days
+from utils import build_ledger, fmt, get_paydays, get_weekly_expense_days, today_eastern
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -215,7 +215,7 @@ def _render_ledger(df) -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def tab_current_month() -> None:
-    today = date.today()
+    today = today_eastern()
     year, month = today.year, today.month
     _, days_in_month = calendar.monthrange(year, month)
 

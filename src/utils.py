@@ -4,10 +4,23 @@ utils.py – Shared helpers: formatting, date utilities, ledger builder.
 from __future__ import annotations
 
 import calendar
-from datetime import date
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 import streamlit as st
+
+_EASTERN = ZoneInfo("America/New_York")
+
+
+def now_eastern() -> datetime:
+    """Return the current datetime in US Eastern time (ET/EST/EDT)."""
+    return datetime.now(tz=_EASTERN)
+
+
+def today_eastern() -> date:
+    """Return today's date in US Eastern time."""
+    return now_eastern().date()
 
 
 # ─────────────────────────────────────────────────────────────────────────────

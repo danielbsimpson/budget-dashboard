@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import fmt, get_paydays, get_weekly_expense_days
+from utils import fmt, get_paydays, get_weekly_expense_days, today_eastern
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -234,7 +234,7 @@ def tab_next_month() -> None:
         "the **carry-over** (current − statement) is due next month."
     )
 
-    today = date.today()
+    today = today_eastern()
     next_month_date = (date(today.year, today.month, 1) + timedelta(days=32)).replace(day=1)
     year, month = next_month_date.year, next_month_date.month
     _, days_in_month = calendar.monthrange(year, month)

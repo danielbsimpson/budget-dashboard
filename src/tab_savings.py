@@ -9,7 +9,7 @@ from datetime import date, timedelta
 import plotly.express as px
 import streamlit as st
 
-from utils import fmt
+from utils import fmt, today_eastern
 from future_io import (
     load_future_latest,
     save_future,
@@ -120,7 +120,7 @@ def _savings_overview() -> None:
     monthly_save = st.number_input("Monthly Savings Amount ($)", value=st.session_state.get("monthly_save", FUTURE_DEFAULTS["monthly_save"]), step=50.0, key="monthly_save")
     months_ahead = st.slider("Months to Project", min_value=6, max_value=60, value=st.session_state.get("sav_months", FUTURE_DEFAULTS["sav_months"]), key="sav_months")
 
-    today = date.today()
+    today = today_eastern()
     rows  = []
     bal   = total_liquid
     for i in range(1, months_ahead + 1):
@@ -166,7 +166,7 @@ def _mortgage_calculator() -> None:
     dp_table.index.name = "Home Price"
     st.dataframe(dp_table, width='stretch')
 
-    today     = date.today()
+    today     = today_eastern()
     save_rows = []
     bal       = current_saved
     for i in range(1, months_to_goal + 2):
@@ -372,7 +372,7 @@ def _k401_projections() -> None:
 def _student_loans() -> None:
     import pandas as pd
     import plotly.graph_objects as go
-    from datetime import date
+    from utils import today_eastern as _today_eastern
 
     st.subheader("🎓 Student Loan Payoff Planner")
 
@@ -438,7 +438,7 @@ def _student_loans() -> None:
     def _amortize(balance: float, annual_rate: float, monthly_payment: float) -> list[dict]:
         rows = []
         monthly_rate = annual_rate / 100 / 12
-        cur = date.today().replace(day=1)
+        cur = _today_eastern().replace(day=1)
         month_num = 0
         while balance > 0.001:
             month_num += 1

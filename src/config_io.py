@@ -38,6 +38,7 @@ from pathlib import Path
 
 import pandas as pd
 import streamlit as st
+from utils import now_eastern
 
 DATA_PATH = Path(__file__).parent.parent / "data" / "current_data.csv"
 _SUPABASE_TABLE = "budget_snapshots"
@@ -106,7 +107,7 @@ SCALAR_COLS += ["ai_rows", "oe_expense_rows", "cc_cards"]
 
 def _build_snapshot(state) -> dict:
     """Flatten session_state into a single storable dict."""
-    row: dict = {"saved_at": datetime.now().isoformat(timespec="seconds")}
+    row: dict = {"saved_at": now_eastern().isoformat(timespec="seconds")}
     row["paycheck_amount"] = state.get("paycheck_amount", 1490.00)
     row["pay_frequency"]   = state.get("pay_frequency",   "Weekly")
     row["pay_weekday_idx"] = state.get("pay_weekday_idx", 4)
@@ -232,7 +233,7 @@ def apply_to_state(row: dict) -> None:
     # ── Determine whether the last save was in the current calendar month ────
     try:
         saved_dt   = datetime.fromisoformat(row.get("saved_at", ""))
-        now        = datetime.now()
+        now        = now_eastern()
         same_month = (saved_dt.year == now.year and saved_dt.month == now.month)
     except (ValueError, TypeError):
         same_month = False
