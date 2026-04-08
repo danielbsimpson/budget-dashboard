@@ -317,14 +317,91 @@ def tab_next_month() -> None:
     fig.update_layout(hovermode="x unified")
     st.plotly_chart(fig, width='stretch', key="chart_next_balance")
 
-    # ── Summary ───────────────────────────────────────────────────────────────
+    # ── Summary tile colours ──────────────────────────────────────────────────
+    RENT_THRESHOLD = 2898.00
+
+    # Opening Balance: same rules as current month tab
+    ob_diff = nm_opening - RENT_THRESHOLD
+    if ob_diff > 100:
+        ob_color = "#1e7e34"       # green
+    elif ob_diff >= -100:
+        ob_color = "#856404"       # yellow/amber
+    else:
+        ob_color = "#721c24"       # red
+
+    # Total Paychecks: always green
+    tp_color = "#1e7e34"
+
+    # Total Outgoing: always red
+    to_color = "#721c24"
+
+    # Projected End Balance: compare against rent + parking + water + sewage
+    next_rent_total = (
+        rec["rec_rent"]
+        + rec["rec_parking"]
+        + rec["rec_water"]
+        + rec["rec_sewer"]
+    )
+    pe_diff = running - next_rent_total
+    if pe_diff > 100:
+        pe_color = "#1e7e34"
+    elif pe_diff >= -100:
+        pe_color = "#856404"
+    else:
+        pe_color = "#721c24"
+
+    # ── Render tiles ──────────────────────────────────────────────────────────
+    def _tile(label: str, value: str, subtitle: str, bg: str) -> str:
+        return f"""
+        <div style="
+            background:{bg};
+            border-radius:10px;
+            padding:16px 12px 12px 12px;
+            text-align:center;
+            color:#ffffff;
+            height:100%;
+            box-sizing:border-box;
+        ">
+            <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.05em;
+                        text-transform:uppercase;opacity:0.85;margin-bottom:6px;">
+                {label}
+            </div>
+            <div style="font-size:1.45rem;font-weight:700;line-height:1.2;">
+                {value}
+            </div>
+            <div style="font-size:0.72rem;opacity:0.75;margin-top:6px;">
+                {subtitle}
+            </div>
+        </div>"""
+
     st.subheader("📊 Next Month Summary")
-    mc1, mc2, mc3, mc4 = st.columns(4)
-    mc1.metric("Opening Balance",       fmt(nm_opening))
-    mc2.metric("Total Paychecks",       fmt(total_income))
-    mc3.metric("Total Outgoing",        fmt(total_out))
-    mc4.metric("Projected End Balance", fmt(running),
-               delta=f"{running - nm_opening:+,.2f}")
+    t1, t2, t3, t4 = st.columns(4)
+    t1.markdown(_tile(
+        "Opening Balance",
+        fmt(nm_opening),
+        f"{ob_diff:+,.2f} vs rent threshold",
+        ob_color,
+    ), unsafe_allow_html=True)
+    t2.markdown(_tile(
+        "Total Paychecks",
+        fmt(total_income),
+        "next month",
+        tp_color,
+    ), unsafe_allow_html=True)
+    t3.markdown(_tile(
+        "Total Outgoing",
+        fmt(total_out),
+        "next month",
+        to_color,
+    ), unsafe_allow_html=True)
+    t4.markdown(_tile(
+        "Projected End Balance",
+        fmt(running),
+        f"{pe_diff:+,.2f} vs next rent",
+        pe_color,
+    ), unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:12px'></div>", unsafe_allow_html=True)
 
     if rent_covered:
         st.success(f"✅ All fixed expenses covered. Projected end balance: {fmt(running)}")
