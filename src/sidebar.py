@@ -107,34 +107,44 @@ def _section_income() -> None:
 
 
 def _section_additional_income() -> None:
-    def _add():
-        st.session_state.add_income_rows.append({"description": "", "amount": 0.0, "day": 1})
+    # Assign a stable uid to each row so widget keys don't collide after deletions
+    for row in st.session_state.add_income_rows:
+        if "_uid" not in row:
+            row["_uid"] = id(row)
 
-    def _del(i: int):
-        st.session_state.add_income_rows.pop(i)
+    def _add():
+        new_row = {"description": "", "amount": 0.0, "day": 1}
+        new_row["_uid"] = id(new_row)
+        st.session_state.add_income_rows.append(new_row)
+
+    def _del(uid: int):
+        st.session_state.add_income_rows = [
+            r for r in st.session_state.add_income_rows if r.get("_uid") != uid
+        ]
 
     with st.expander("💸 Additional Income", expanded=False):
         st.caption("One-time income this month (bonus, side work, reimbursement, etc.).")
         for i, row in enumerate(st.session_state.add_income_rows):
+            uid = row["_uid"]
             st.markdown(f"**Income #{i + 1}**")
             ca, cb = st.columns([3, 2])
             with ca:
                 st.session_state.add_income_rows[i]["description"] = st.text_input(
                     "Description", value=row["description"],
-                    key=f"ai_desc_{i}", placeholder="e.g. Bonus",
+                    key=f"ai_desc_{uid}", placeholder="e.g. Bonus",
                     label_visibility="collapsed",
                 )
             with cb:
                 st.session_state.add_income_rows[i]["amount"] = st.number_input(
                     "Amount ($)", value=float(row["amount"]),
                     min_value=0.0, step=1.0, format="%.2f",
-                    key=f"ai_amt_{i}", label_visibility="collapsed",
+                    key=f"ai_amt_{uid}", label_visibility="collapsed",
                 )
             st.session_state.add_income_rows[i]["day"] = st.number_input(
                 "Day of month", value=int(row["day"]),
-                min_value=1, max_value=31, step=1, key=f"ai_day_{i}",
+                min_value=1, max_value=31, step=1, key=f"ai_day_{uid}",
             )
-            st.button("🗑️ Remove", key=f"ai_del_{i}", on_click=_del, args=(i,))
+            st.button("🗑️ Remove", key=f"ai_del_{uid}", on_click=_del, args=(uid,))
             st.divider()
 
         st.button("➕ Add Income", on_click=_add, key="add_income_btn")
@@ -175,34 +185,44 @@ def _section_recurring_expenses() -> None:
 
 
 def _section_one_time_expenses() -> None:
-    def _add():
-        st.session_state.oe_expense_rows.append({"name": "", "amount": 0.0, "day": 1})
+    # Assign a stable uid to each row so widget keys don't collide after deletions
+    for row in st.session_state.oe_expense_rows:
+        if "_uid" not in row:
+            row["_uid"] = id(row)
 
-    def _del(i: int):
-        st.session_state.oe_expense_rows.pop(i)
+    def _add():
+        new_row = {"name": "", "amount": 0.0, "day": 1}
+        new_row["_uid"] = id(new_row)
+        st.session_state.oe_expense_rows.append(new_row)
+
+    def _del(uid: int):
+        st.session_state.oe_expense_rows = [
+            r for r in st.session_state.oe_expense_rows if r.get("_uid") != uid
+        ]
 
     with st.expander("🧾 Additional One-time Expenses", expanded=False):
         st.caption("Non-recurring expenses this month (car repair, medical bill, etc.).")
         for i, row in enumerate(st.session_state.oe_expense_rows):
+            uid = row["_uid"]
             st.markdown(f"**Expense #{i + 1}**")
             ca, cb = st.columns([3, 2])
             with ca:
                 st.session_state.oe_expense_rows[i]["name"] = st.text_input(
                     "Name", value=row["name"],
-                    key=f"oe_name_{i}", placeholder="e.g. Car Repair",
+                    key=f"oe_name_{uid}", placeholder="e.g. Car Repair",
                     label_visibility="collapsed",
                 )
             with cb:
                 st.session_state.oe_expense_rows[i]["amount"] = st.number_input(
                     "Amount ($)", value=float(row["amount"]),
                     min_value=0.0, step=1.0, format="%.2f",
-                    key=f"oe_amt_{i}", label_visibility="collapsed",
+                    key=f"oe_amt_{uid}", label_visibility="collapsed",
                 )
             st.session_state.oe_expense_rows[i]["day"] = st.number_input(
                 "Day of month", value=int(row["day"]),
-                min_value=1, max_value=31, step=1, key=f"oe_day_{i}",
+                min_value=1, max_value=31, step=1, key=f"oe_day_{uid}",
             )
-            st.button("🗑️ Remove", key=f"oe_del_{i}", on_click=_del, args=(i,))
+            st.button("🗑️ Remove", key=f"oe_del_{uid}", on_click=_del, args=(uid,))
             st.divider()
 
         st.button("➕ Add Expense", on_click=_add, key="add_oe_expense_btn")

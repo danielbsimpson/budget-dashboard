@@ -72,11 +72,20 @@ def _one_offs_expander() -> None:
             {"description": "Date Night / Fun", "amount": 150.0, "day": 15}
         ]
 
-    def _add():
-        st.session_state.nm_oe_rows.append({"description": "", "amount": 0.0, "day": 1})
+    # Assign a stable uid to each row so widget keys don't collide after deletions
+    for row in st.session_state.nm_oe_rows:
+        if "_uid" not in row:
+            row["_uid"] = id(row)
 
-    def _del(i: int):
-        st.session_state.nm_oe_rows.pop(i)
+    def _add():
+        new_row = {"description": "", "amount": 0.0, "day": 1}
+        new_row["_uid"] = id(new_row)
+        st.session_state.nm_oe_rows.append(new_row)
+
+    def _del(uid: int):
+        st.session_state.nm_oe_rows = [
+            r for r in st.session_state.nm_oe_rows if r.get("_uid") != uid
+        ]
 
     with st.expander("📋 Additional One-Off Expenses (optional)", expanded=False):
         st.caption("Extra or irregular expenses for next month only.")
@@ -86,20 +95,21 @@ def _one_offs_expander() -> None:
                 st.session_state.nm_oe_rows[i]["day"] = row["date"].day
                 del st.session_state.nm_oe_rows[i]["date"]
                 row = st.session_state.nm_oe_rows[i]
+            uid = row["_uid"]
             c1, c2, c3, c4 = st.columns([3, 2, 1, 1])
             with c1:
                 st.session_state.nm_oe_rows[i]["description"] = st.text_input(
-                    f"NM Expense #{i+1}", value=row["description"], key=f"nm_oe_desc_{i}")
+                    f"NM Expense #{i+1}", value=row["description"], key=f"nm_oe_desc_{uid}")
             with c2:
                 st.session_state.nm_oe_rows[i]["amount"] = st.number_input(
                     f"NM Amount #{i+1}", value=float(row["amount"]),
-                    step=0.01, format="%.2f", key=f"nm_oe_amt_{i}")
+                    step=0.01, format="%.2f", key=f"nm_oe_amt_{uid}")
             with c3:
                 st.session_state.nm_oe_rows[i]["day"] = st.number_input(
                     f"Day #{i+1}", value=int(row.get("day", 1)),
-                    min_value=1, max_value=31, step=1, key=f"nm_oe_day_{i}")
+                    min_value=1, max_value=31, step=1, key=f"nm_oe_day_{uid}")
             with c4:
-                st.button("🗑️", key=f"nm_oe_del_{i}", on_click=_del, args=(i,))
+                st.button("🗑️", key=f"nm_oe_del_{uid}", on_click=_del, args=(uid,))
         st.button("➕ Add Expense", on_click=_add, key="nm_add_oe")
 
 
