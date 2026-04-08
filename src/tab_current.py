@@ -257,17 +257,132 @@ def tab_current_month() -> None:
     # Chart
     _render_chart(df, today, month, year)
 
-    # Summary metrics
+    # ── Summary tile colours ──────────────────────────────────────────────────
+    RENT_THRESHOLD = 2898.00
+
+    # Opening Balance: green if >$100 above rent threshold, yellow if within
+    # $100, red if more than $100 below.
+    ob_diff = opening_balance - RENT_THRESHOLD
+    if ob_diff > 100:
+        ob_color = "#1e7e34"       # green
+    elif ob_diff >= -100:
+        ob_color = "#856404"       # yellow/amber
+    else:
+        ob_color = "#721c24"       # red
+
+    # Current Balance: green unless projected_eom ≤ 100 (yellow) or ≤ 0 (red)
+    if projected_eom <= 0:
+        cb_color = "#721c24"
+    elif projected_eom <= 100:
+        cb_color = "#856404"
+    else:
+        cb_color = "#1e7e34"
+
+    # Projected Today: green if projected <= current (we're at or ahead of
+    # schedule), red if projected > current (we're behind).
+    if projected_today is None:
+        pt_color = "#1e7e34"
+    elif projected_today > current_balance:
+        pt_color = "#721c24"
+    else:
+        pt_color = "#1e7e34"
+
+    # Total Income: always green
+    ti_color = "#1e7e34"
+
+    # Total Expenses: always red
+    te_color = "#721c24"
+
+    # Projected End: compare against rent-related bills (rent + parking +
+    # water + sewage) to ensure next month's day-2 payments are covered.
+    rent_entry    = st.session_state.get("rec_rent",    {})
+    parking_entry = st.session_state.get("rec_parking", {})
+    water_entry   = st.session_state.get("rec_water",   {})
+    sewer_entry   = st.session_state.get("rec_sewer",   {})
+    next_rent_total = (
+        float(rent_entry.get("amount",    0.0) if isinstance(rent_entry,    dict) else 0.0)
+        + float(parking_entry.get("amount", 0.0) if isinstance(parking_entry, dict) else 0.0)
+        + float(water_entry.get("amount",   0.0) if isinstance(water_entry,   dict) else 0.0)
+        + float(sewer_entry.get("amount",   0.0) if isinstance(sewer_entry,   dict) else 0.0)
+    )
+    pe_diff = projected_eom - next_rent_total
+    if pe_diff > 100:
+        pe_color = "#1e7e34"
+    elif pe_diff >= -100:
+        pe_color = "#856404"
+    else:
+        pe_color = "#721c24"
+
+    # ── Render tiles ──────────────────────────────────────────────────────────
+    def _tile(label: str, value: str, subtitle: str, bg: str) -> str:
+        return f"""
+        <div style="
+            background:{bg};
+            border-radius:10px;
+            padding:16px 12px 12px 12px;
+            text-align:center;
+            color:#ffffff;
+            height:100%;
+            box-sizing:border-box;
+        ">
+            <div style="font-size:0.72rem;font-weight:600;letter-spacing:0.05em;
+                        text-transform:uppercase;opacity:0.85;margin-bottom:6px;">
+                {label}
+            </div>
+            <div style="font-size:1.45rem;font-weight:700;line-height:1.2;">
+                {value}
+            </div>
+            <div style="font-size:0.72rem;opacity:0.75;margin-top:6px;">
+                {subtitle}
+            </div>
+        </div>"""
+
+    variance_sign = "+" if variance >= 0 else ""
+    pt_sub = (
+        f"{variance_sign}{variance:,.2f} vs projected"
+        if projected_today is not None else "—"
+    )
+
     st.subheader("📊 Month Summary")
-    mc1, mc2, mc3, mc4, mc5, mc6 = st.columns(6)
-    mc1.metric("Opening Balance",          fmt(opening_balance))
-    mc2.metric("Current Balance",          fmt(current_balance),
-               delta=f"{variance:+,.2f} vs projected", delta_color="normal")
-    mc3.metric("Projected Today",          fmt(projected_today) if projected_today is not None else "—")
-    mc4.metric("Total Income",             fmt(total_income))
-    mc5.metric("Total Expenses",           fmt(total_expenses))
-    mc6.metric("Projected End (from now)", fmt(projected_eom),
-               delta=f"{projected_eom - opening_balance:+,.2f} vs opening", delta_color="normal")
+    t1, t2, t3, t4, t5, t6 = st.columns(6)
+    t1.markdown(_tile(
+        "Opening Balance",
+        fmt(opening_balance),
+        f"{ob_diff:+,.2f} vs rent threshold",
+        ob_color,
+    ), unsafe_allow_html=True)
+    t2.markdown(_tile(
+        "Current Balance",
+        fmt(current_balance),
+        f"Projected end: {fmt(projected_eom)}",
+        cb_color,
+    ), unsafe_allow_html=True)
+    t3.markdown(_tile(
+        "Projected Today",
+        fmt(projected_today) if projected_today is not None else "—",
+        pt_sub,
+        pt_color,
+    ), unsafe_allow_html=True)
+    t4.markdown(_tile(
+        "Total Income",
+        fmt(total_income),
+        "this month",
+        ti_color,
+    ), unsafe_allow_html=True)
+    t5.markdown(_tile(
+        "Total Expenses",
+        fmt(total_expenses),
+        "this month",
+        te_color,
+    ), unsafe_allow_html=True)
+    t6.markdown(_tile(
+        "Projected End",
+        fmt(projected_eom),
+        f"{pe_diff:+,.2f} vs next rent",
+        pe_color,
+    ), unsafe_allow_html=True)
+
+    st.markdown("<div style='margin-top:12px'></div>", unsafe_allow_html=True)
 
     if variance >= 0:
         st.success(f"✅ You are **{fmt(variance)} ahead** of the projected balance for today.")
