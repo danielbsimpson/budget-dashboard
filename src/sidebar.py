@@ -3,8 +3,10 @@ sidebar.py – Sidebar UI: income, recurring expenses, credit cards.
 """
 from __future__ import annotations
 
+from datetime import date
+
 import streamlit as st
-from utils import fmt
+from utils import fmt, WEEKDAY_NAMES, today_eastern
 from config_io import load_latest, save_current, apply_to_state, is_cloud
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -66,6 +68,12 @@ def _init_state() -> None:
         if "running" in card and "current_balance" not in card:
             card["current_balance"] = card.pop("running")
 
+    if "weekly_expense_rows" not in st.session_state:
+        st.session_state.weekly_expense_rows = [
+            {"name": "Car Payments", "amount": 175.00, "weekday": 0},
+            {"name": "Groceries",    "amount": 120.00, "weekday": 5},
+        ]
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Sub-sections
@@ -80,21 +88,39 @@ def _section_income() -> None:
         key="paycheck_amount",
     )
 
+    freq_options = ["Weekly", "Bi-Weekly", "Monthly"]
+    freq = st.session_state.get("pay_frequency", "Weekly")
+    freq_index = freq_options.index(freq) if freq in freq_options else 0
     pay_frequency = st.radio(
-        "Pay Frequency", options=["Weekly", "Monthly"],
-        index=0 if st.session_state.get("pay_frequency", "Weekly") == "Weekly" else 1,
+        "Pay Frequency", options=freq_options,
+        index=freq_index,
         key="pay_frequency",
     )
 
-    if pay_frequency == "Weekly":
-        weekday_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    if pay_frequency in ("Weekly", "Bi-Weekly"):
         pay_weekday = st.selectbox(
-            "Payday (day of week)", options=weekday_names,
+            "Payday (day of week)", options=WEEKDAY_NAMES,
             index=st.session_state.get("pay_weekday_idx", 4),
             key="pay_weekday_name",
         )
-        st.session_state["pay_weekday_idx"] = weekday_names.index(pay_weekday)
-        st.caption(f"📅 Paydays: every **{pay_weekday}**")
+        st.session_state["pay_weekday_idx"] = WEEKDAY_NAMES.index(pay_weekday)
+
+        if pay_frequency == "Bi-Weekly":
+            default_anchor = st.session_state.get("pay_biweekly_anchor", today_eastern().isoformat())
+            try:
+                anchor_val = date.fromisoformat(default_anchor)
+            except (ValueError, TypeError):
+                anchor_val = today_eastern()
+            anchor_date = st.date_input(
+                "Reference Payday",
+                value=anchor_val,
+                help="A known payday — used to determine which weeks you get paid.",
+                key="pay_biweekly_anchor_input",
+            )
+            st.session_state["pay_biweekly_anchor"] = anchor_date.isoformat()
+            st.caption(f"📅 Paydays: every other **{pay_weekday}**, anchored to **{anchor_date.strftime('%b %d, %Y')}**")
+        else:
+            st.caption(f"📅 Paydays: every **{pay_weekday}**")
     else:
         st.number_input(
             "Payday (day of month)", min_value=1, max_value=31, step=1,
@@ -153,6 +179,56 @@ def _section_additional_income() -> None:
             st.caption(f"Total additional income: **{fmt(total_ai)}**")
 
 
+def _section_weekly_expenses() -> None:
+    # Assign a stable uid to each row so widget keys don't collide after deletions
+    for row in st.session_state.weekly_expense_rows:
+        if "_uid" not in row:
+            row["_uid"] = id(row)
+
+    def _add():
+        new_row = {"name": "", "amount": 0.0, "weekday": 0}
+        new_row["_uid"] = id(new_row)
+        st.session_state.weekly_expense_rows.append(new_row)
+
+    def _del(uid: int):
+        st.session_state.weekly_expense_rows = [
+            r for r in st.session_state.weekly_expense_rows if r.get("_uid") != uid
+        ]
+
+    with st.expander("🔄 Weekly Expenses", expanded=False):
+        st.caption("Expenses that repeat every week on a chosen day.")
+        for i, row in enumerate(st.session_state.weekly_expense_rows):
+            uid = row["_uid"]
+            st.markdown(f"**Expense #{i + 1}**")
+            ca, cb = st.columns([3, 2])
+            with ca:
+                st.session_state.weekly_expense_rows[i]["name"] = st.text_input(
+                    "Name", value=row.get("name", ""),
+                    key=f"wk_name_{uid}", placeholder="e.g. Groceries",
+                    label_visibility="collapsed",
+                )
+            with cb:
+                st.session_state.weekly_expense_rows[i]["amount"] = st.number_input(
+                    "Amount ($)", value=float(row.get("amount", 0.0)),
+                    min_value=0.0, step=1.0, format="%.2f",
+                    key=f"wk_amt_{uid}", label_visibility="collapsed",
+                )
+            weekday_idx = int(row.get("weekday", 0))
+            selected_day = st.selectbox(
+                "Day of week", options=WEEKDAY_NAMES,
+                index=weekday_idx,
+                key=f"wk_day_{uid}",
+            )
+            st.session_state.weekly_expense_rows[i]["weekday"] = WEEKDAY_NAMES.index(selected_day)
+            st.button("🗑️ Remove", key=f"wk_del_{uid}", on_click=_del, args=(uid,))
+            st.divider()
+
+        st.button("➕ Add Weekly Expense", on_click=_add, key="add_wk_expense_btn")
+        if st.session_state.weekly_expense_rows:
+            total_wk = sum(r.get("amount", 0.0) for r in st.session_state.weekly_expense_rows)
+            st.caption(f"Recurring per week: **{fmt(total_wk)}**")
+
+
 def _section_recurring_expenses() -> None:
     st.subheader("📉 Recurring Expenses")
 
@@ -182,6 +258,8 @@ def _section_recurring_expenses() -> None:
                 new_day = st.number_input("Day", value=int(entry["day"]),
                                           min_value=1, max_value=31, step=1, key=f"{key}_day")
             st.session_state[key] = {"amount": new_amt, "day": new_day}
+
+    _section_weekly_expenses()
 
 
 def _section_one_time_expenses() -> None:

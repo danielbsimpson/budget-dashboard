@@ -53,10 +53,32 @@ def get_days_of_week(year: int, month: int, weekday: int) -> list[date]:
 
 def get_paydays(year: int, month: int) -> list[date]:
     """Return payday dates for *month* based on sidebar session_state settings."""
+    from datetime import timedelta
     freq = st.session_state.get("pay_frequency", "Weekly")
     if freq == "Weekly":
         weekday = st.session_state.get("pay_weekday_idx", 4)   # default Friday
         return get_days_of_week(year, month, weekday)
+    if freq == "Bi-Weekly":
+        weekday = st.session_state.get("pay_weekday_idx", 4)
+        anchor_str = st.session_state.get("pay_biweekly_anchor", "")
+        try:
+            anchor = date.fromisoformat(anchor_str)
+        except (ValueError, TypeError):
+            anchor = get_days_of_week(year, month, weekday)[0] if get_days_of_week(year, month, weekday) else date(year, month, 1)
+        _, days_in_month = calendar.monthrange(year, month)
+        month_start = date(year, month, 1)
+        month_end   = date(year, month, days_in_month)
+        # Walk anchor to the first bi-weekly date on or after month_start
+        d = anchor
+        while d > month_start:
+            d -= timedelta(weeks=2)
+        while d < month_start:
+            d += timedelta(weeks=2)
+        paydays: list[date] = []
+        while d <= month_end:
+            paydays.append(d)
+            d += timedelta(weeks=2)
+        return paydays
     # Monthly – single payment on the chosen day-of-month
     day = st.session_state.get("pay_monthly_day", 1)
     _, days_in_month = calendar.monthrange(year, month)

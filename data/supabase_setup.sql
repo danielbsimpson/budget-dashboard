@@ -24,9 +24,10 @@ create table if not exists public.budget_snapshots (
 
     -- ── Income ────────────────────────────────────────────────────────────────
     paycheck_amount       numeric      not null default 0,
-    pay_frequency         text         not null default 'Weekly',  -- 'Weekly' | 'Monthly'
+    pay_frequency         text         not null default 'Weekly',  -- 'Weekly' | 'Bi-Weekly' | 'Monthly'
     pay_weekday_idx       integer      not null default 4,         -- 0=Mon … 6=Sun
     pay_monthly_day       integer      not null default 1,
+    pay_biweekly_anchor   text         not null default '',        -- ISO-8601 date; used when Bi-Weekly
 
     -- ── Checking balances ─────────────────────────────────────────────────────
     opening_balance       numeric      not null default 0,   -- balance on day 1 of month
@@ -59,7 +60,8 @@ create table if not exists public.budget_snapshots (
     -- ── JSON blobs ────────────────────────────────────────────────────────────
     ai_rows               text         not null default '[]',  -- additional income rows
     oe_expense_rows       text         not null default '[]',  -- one-time expense rows
-    cc_cards              text         not null default '[]'   -- credit card list
+    cc_cards              text         not null default '[]',  -- credit card list
+    weekly_expense_rows   text         not null default '[]'   -- weekly recurring expenses
 );
 
 -- Single-user personal app — disable RLS for simplest access.
@@ -125,12 +127,7 @@ alter table public.future_snapshots disable row level security;
 
 -- =============================================================================
 -- SECTION 3 — Seed budget_snapshots
--- Values taken from the latest row of current_data.csv (2026-04-02T12:41:56).
---
--- NOTE: ai_rows and oe_expense_rows below reflect the actual saved values from
--- that snapshot. These are April 2026 one-time items — they will be cleared
--- automatically by the app on the next calendar month rollover.
--- To start with a clean slate instead, replace their values with '[]'.
+-- Values taken from Supabase row id=15 (2026-04-11T10:04:35-04:00).
 -- =============================================================================
 
 insert into public.budget_snapshots (
@@ -139,6 +136,7 @@ insert into public.budget_snapshots (
     pay_frequency,
     pay_weekday_idx,
     pay_monthly_day,
+    pay_biweekly_anchor,
     opening_balance,
     current_balance,
     rec_rent_amount,       rec_rent_day,
@@ -154,32 +152,36 @@ insert into public.budget_snapshots (
     rec_subs_amount,       rec_subs_day,
     ai_rows,
     oe_expense_rows,
-    cc_cards
+    cc_cards,
+    weekly_expense_rows
 ) values (
-    '2026-04-02T12:41:56',
+    '2026-04-11T10:04:35-04:00',
     1490.00,               -- paycheck_amount
     'Weekly',              -- pay_frequency
     4,                     -- pay_weekday_idx  (4 = Friday)
     1,                     -- pay_monthly_day  (unused when Weekly)
+    '',                    -- pay_biweekly_anchor (unused when Weekly)
     2883.84,               -- opening_balance
-    242.58,                -- current_balance
+    13007.62,              -- current_balance
     2898.00,  2,           -- rent
     75.00,    2,           -- parking
     85.00,    7,           -- gas
     100.00,   7,           -- electricity
     55.00,    2,           -- water
     120.00,   2,           -- sewer
-    423.00,   10,          -- student loans
+    423.00,   13,          -- student loans
     69.99,    26,          -- internet
     90.04,    29,          -- phone
     150.00,   3,           -- insurance
     47.00,    24,          -- subscriptions
-    -- Additional income (month-specific — set to '[]' if you want a clean start)
+    -- Additional income (month-specific — set to ''[]'' if you want a clean start)
     '[{"description": "Bonus", "amount": 14500.0, "day": 3}, {"description": "Savings", "amount": 700.0, "day": 1}]',
-    -- One-time expenses (month-specific — set to '[]' if you want a clean start)
-    '[{"name": "Desk", "amount": 1320.0, "day": 5}, {"name": "Chair", "amount": 330.0, "day": 5}, {"name": "Monitor", "amount": 880.0, "day": 5}, {"name": "Handheld", "amount": 880.0, "day": 5}, {"name": "Savings Deposit", "amount": 3000.0, "day": 5}, {"name": "Investment Deposit", "amount": 1500.0, "day": 5}, {"name": "Additional Car Payment", "amount": 1000.0, "day": 5}]',
+    -- One-time expenses (month-specific — set to ''[]'' if you want a clean start)
+    '[{"name": "Monitor", "amount": 880.0, "day": 13}, {"name": "Handheld", "amount": 880.0, "day": 13}, {"name": "Savings Deposit", "amount": 3000.0, "day": 5}, {"name": "Investment Deposit", "amount": 1500.0, "day": 13}, {"name": "Additional Car Payment", "amount": 1000.0, "day": 13}, {"name": "Discover Running Balance", "amount": 1431.67, "day": 6}, {"name": "MC Running Balance", "amount": 983.31, "day": 6}]',
     -- Credit cards
-    '[{"name": "Discover", "statement_balance": 2301.44, "current_balance": 0.0, "pay_day": 8}, {"name": "MasterCard", "statement_balance": 4469.0, "current_balance": 0.0, "pay_day": 17}]'
+    '[{"name": "Discover", "statement_balance": 967.86, "current_balance": 1225.71, "pay_day": 13}, {"name": "MasterCard", "statement_balance": 5673.72, "current_balance": 0.0, "pay_day": 22}]',
+    -- Weekly recurring expenses
+    '[{"name": "Car Payments", "amount": 175.0, "weekday": 0}, {"name": "Groceries", "amount": 120.0, "weekday": 5}]'
 );
 
 

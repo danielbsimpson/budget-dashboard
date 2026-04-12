@@ -10,7 +10,7 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 
-from utils import fmt, get_paydays, get_weekly_expense_days, today_eastern
+from utils import fmt, get_days_of_week, get_paydays, today_eastern
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -126,17 +126,12 @@ def _build_expenses(year: int, month: int, days_in_month: int,
         expenses.append({"date": pay_day, "description": "Payday 💰", "amount": -paycheck_amt})
 
     # Weekly
-    def _wk_amt(key: str, default: float) -> float:
-        v = st.session_state.get(key, {})
-        return v.get("amount", default) if isinstance(v, dict) else default
-
-    car_amt = _wk_amt("wk_car", 150.00)
-    for d in get_weekly_expense_days(year, month, "wk_car"):
-        expenses.append({"date": d, "description": "Car Payment", "amount": car_amt})
-
-    grocery_amt = _wk_amt("wk_grocery", 120.00)
-    for d in get_weekly_expense_days(year, month, "wk_grocery"):
-        expenses.append({"date": d, "description": "Grocery", "amount": grocery_amt})
+    for wk_row in st.session_state.get("weekly_expense_rows", []):
+        amt     = float(wk_row.get("amount", 0.0))
+        weekday = int(wk_row.get("weekday", 0))
+        name    = wk_row.get("name", "Weekly Expense")
+        for d in get_days_of_week(year, month, weekday):
+            expenses.append({"date": d, "description": name, "amount": amt})
 
     # Fixed recurring bills
     housing_day = days.get("rec_rent", 2)

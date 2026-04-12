@@ -15,9 +15,10 @@ Supabase table schema – see SUPABASE_SETUP.md for the full SQL.
 CSV / Supabase column reference:
   saved_at              – ISO-8601 timestamp of the save
   paycheck_amount       – float
-  pay_frequency         – "Weekly" | "Monthly"
-  pay_weekday_idx       – int (0=Mon … 6=Sun); used when Weekly
+  pay_frequency         – "Weekly" | "Bi-Weekly" | "Monthly"
+  pay_weekday_idx       – int (0=Mon … 6=Sun); used when Weekly or Bi-Weekly
   pay_monthly_day       – int (1-31); used when Monthly
+  pay_biweekly_anchor   – ISO-8601 date string; used when Bi-Weekly
   opening_balance       – float  (Opening Checking Balance, day 1 of month)
   current_balance       – float  (Current Checking Balance, as of last save)
   rec_<key>_amount      – float  } one pair per each REC_KEY
@@ -26,6 +27,8 @@ CSV / Supabase column reference:
   oe_expense_rows       – JSON text  list[{name, amount, day}]
   cc_cards              – JSON text  list[{name, statement_balance,
                                            current_balance, pay_day}]
+  weekly_expense_rows   – JSON text  list[{name, amount, weekday}]
+                                           weekday: 0=Mon … 6=Sun
 
 The store keeps every snapshot ever saved; the app always reads the latest.
 """
@@ -92,13 +95,14 @@ SCALAR_COLS = [
     "pay_frequency",
     "pay_weekday_idx",
     "pay_monthly_day",
+    "pay_biweekly_anchor",
     "opening_balance",
     "current_balance",
 ]
 for _k in REC_KEYS:
     SCALAR_COLS.append(f"{_k}_amount")
     SCALAR_COLS.append(f"{_k}_day")
-SCALAR_COLS += ["ai_rows", "oe_expense_rows", "cc_cards"]
+SCALAR_COLS += ["ai_rows", "oe_expense_rows", "cc_cards", "weekly_expense_rows"]
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -108,10 +112,11 @@ SCALAR_COLS += ["ai_rows", "oe_expense_rows", "cc_cards"]
 def _build_snapshot(state) -> dict:
     """Flatten session_state into a single storable dict."""
     row: dict = {"saved_at": now_eastern().isoformat(timespec="seconds")}
-    row["paycheck_amount"] = state.get("paycheck_amount", 1490.00)
-    row["pay_frequency"]   = state.get("pay_frequency",   "Weekly")
-    row["pay_weekday_idx"] = state.get("pay_weekday_idx", 4)
-    row["pay_monthly_day"] = state.get("pay_monthly_day", 1)
+    row["paycheck_amount"]     = state.get("paycheck_amount", 1490.00)
+    row["pay_frequency"]       = state.get("pay_frequency",   "Weekly")
+    row["pay_weekday_idx"]     = state.get("pay_weekday_idx", 4)
+    row["pay_monthly_day"]     = state.get("pay_monthly_day", 1)
+    row["pay_biweekly_anchor"] = state.get("pay_biweekly_anchor", "")
     row["opening_balance"] = state.get("cm_opening",      0.0)
     row["current_balance"] = state.get("cm_current_bal",  0.0)
     for key in REC_KEYS:
@@ -122,9 +127,10 @@ def _build_snapshot(state) -> dict:
         else:
             row[f"{key}_amount"] = 0.0
             row[f"{key}_day"]    = 1
-    row["ai_rows"]         = json.dumps(state.get("add_income_rows",  []))
-    row["oe_expense_rows"] = json.dumps(state.get("oe_expense_rows",  []))
-    row["cc_cards"]        = json.dumps(state.get("cc_cards",         []))
+    row["ai_rows"]             = json.dumps(state.get("add_income_rows",      []))
+    row["oe_expense_rows"]     = json.dumps(state.get("oe_expense_rows",      []))
+    row["cc_cards"]            = json.dumps(state.get("cc_cards",             []))
+    row["weekly_expense_rows"] = json.dumps(state.get("weekly_expense_rows",  []))
     return row
 
 
@@ -251,6 +257,11 @@ def apply_to_state(row: dict) -> None:
     if "pay_monthly_day" not in st.session_state:
         st.session_state["pay_monthly_day"] = _int(row.get("pay_monthly_day"), 1)
 
+    if "pay_biweekly_anchor" not in st.session_state:
+        val = row.get("pay_biweekly_anchor", "")
+        if val and str(val).strip():
+            st.session_state["pay_biweekly_anchor"] = str(val).strip()
+
     if "cm_opening" not in st.session_state:
         st.session_state["cm_opening"] = _float(row.get("opening_balance"), 0.0)
 
@@ -299,3 +310,12 @@ def apply_to_state(row: dict) -> None:
             st.session_state["cc_cards"] = parsed if isinstance(parsed, list) else []
         except (json.JSONDecodeError, TypeError):
             st.session_state["cc_cards"] = []
+    # ── Weekly expense rows ───────────────────────────────────────────
+    if "weekly_expense_rows" not in st.session_state:
+        raw = row.get("weekly_expense_rows")
+        if raw:  # only restore if actually persisted; otherwise let _init_state supply defaults
+            try:
+                parsed = json.loads(raw) if isinstance(raw, str) else []
+                st.session_state["weekly_expense_rows"] = parsed if isinstance(parsed, list) else []
+            except (json.JSONDecodeError, TypeError):
+                pass
