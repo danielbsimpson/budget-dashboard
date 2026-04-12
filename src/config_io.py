@@ -313,9 +313,13 @@ def apply_to_state(row: dict) -> None:
     # ── Weekly expense rows ───────────────────────────────────────────
     if "weekly_expense_rows" not in st.session_state:
         raw = row.get("weekly_expense_rows")
-        if raw:  # only restore if actually persisted; otherwise let _init_state supply defaults
+        if raw:
             try:
                 parsed = json.loads(raw) if isinstance(raw, str) else []
-                st.session_state["weekly_expense_rows"] = parsed if isinstance(parsed, list) else []
+                # Only restore if there are actually saved rows; an empty list
+                # (e.g. Supabase default '[]') means no data was ever persisted,
+                # so leave the key unset and let _init_state supply the defaults.
+                if isinstance(parsed, list) and len(parsed) > 0:
+                    st.session_state["weekly_expense_rows"] = parsed
             except (json.JSONDecodeError, TypeError):
                 pass
