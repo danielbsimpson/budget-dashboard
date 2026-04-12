@@ -133,11 +133,13 @@ function _sbCreditCards() {
       </div>
     </div>`).join('');
 
+  const ccContent = `<div id="sb-cards">${cards}</div>
+    <button class="btn btn-sm add-row-btn" id="sb-cc-add">➕ Add Card</button>`;
+
   return `
   <div class="sb-section">
     <h3>💳 Credit Cards</h3>
-    <div id="sb-cards">${cards}</div>
-    <button class="btn btn-sm add-row-btn" id="sb-cc-add">➕ Add Card</button>
+    ${_sbExpander('sb-exp-cards', '💳 Cards', ccContent)}
   </div>`;
 }
 

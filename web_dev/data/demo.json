@@ -21,8 +21,8 @@
   "rec_subs":      { "amount":   45.00, "day": 24 },
 
   "cc_cards": [
-    { "name": "Chase Visa",  "statement_balance": 2400.00, "current_balance": 0.0, "pay_day": 10 },
-    { "name": "Capital One", "statement_balance": 1800.00, "current_balance": 0.0, "pay_day": 22 }
+    { "name": "Chase Visa",  "statement_balance": 950.00, "current_balance": 1200.0, "pay_day": 10 },
+    { "name": "Capital One", "statement_balance": 800.00, "current_balance": 1000.0, "pay_day": 22 }
   ],
 
   "weekly_expenses": [
