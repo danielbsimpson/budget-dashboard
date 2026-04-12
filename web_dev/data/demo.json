@@ -1,0 +1,75 @@
+{
+  "paycheck_amount": 1700.00,
+  "pay_frequency": "Bi-Weekly",
+  "pay_weekday_idx": 4,
+  "pay_biweekly_anchor": "2026-04-10",
+  "pay_monthly_day": 1,
+
+  "cm_opening": 3200.00,
+  "cm_current_bal": 1650.00,
+
+  "rec_rent":      { "amount": 1450.00, "day": 1  },
+  "rec_parking":   { "amount":   50.00, "day": 1  },
+  "rec_gas":       { "amount":   80.00, "day": 7  },
+  "rec_elec":      { "amount":  130.00, "day": 7  },
+  "rec_water":     { "amount":   45.00, "day": 2  },
+  "rec_sewer":     { "amount":   35.00, "day": 2  },
+  "rec_student":   { "amount":  385.00, "day": 10 },
+  "rec_internet":  { "amount":   65.00, "day": 26 },
+  "rec_phone":     { "amount":   75.00, "day": 29 },
+  "rec_insurance": { "amount":  175.00, "day": 3  },
+  "rec_subs":      { "amount":   45.00, "day": 24 },
+
+  "cc_cards": [
+    { "name": "Chase Visa",  "statement_balance": 2400.00, "current_balance": 0.0, "pay_day": 10 },
+    { "name": "Capital One", "statement_balance": 1800.00, "current_balance": 0.0, "pay_day": 22 }
+  ],
+
+  "weekly_expenses": [
+    { "name": "Groceries",  "amount": 100.00, "weekday": 5 },
+    { "name": "Dining Out", "amount":  55.00, "weekday": 4 }
+  ],
+
+  "add_income_rows": [],
+  "oe_expense_rows": [],
+
+  "nm_oe_rows": [
+    { "description": "Entertainment / Fun", "amount": 100.0, "day": 15 }
+  ],
+
+  "ally":          4800.00,
+  "burke":         1200.00,
+  "rh":            1500.00,
+  "schwab":        9500.00,
+  "merill":       12000.00,
+  "sav_checking":  3200.00,
+  "sav_goal":     30000.00,
+  "monthly_save":    400.00,
+  "sav_months":       18,
+
+  "hp":           280000.0,
+  "dp_pct":            10,
+  "dp_saved":       8000.0,
+  "dp_monthly":      400.0,
+
+  "car_bal":      18500.00,
+  "car_rate":         7.50,
+  "car_pay":        450.00,
+  "car_extra":        0.00,
+  "car_start":   "2023-09-01",
+
+  "k401_cur":    14500.00,
+  "k401_sal":    60000.00,
+  "k401_pct":         6,
+  "k401_emp":         3,
+  "k401_growth":      7,
+  "k401_bonus":       0.00,
+  "k401_age":        32,
+  "k401_retire":     65,
+
+  "sl_bal1":   12500.00,
+  "sl_rate1":      5.50,
+  "sl_bal2":   24000.00,
+  "sl_rate2":      6.54,
+  "sl_pay1":     400.00
+}

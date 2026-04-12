@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>💰 Budget Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- ── Sidebar ──────────────────────────────────────────────────── -->
+    <aside id="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">⚙️ Settings</span>
+        <button id="sidebar-close" class="icon-btn" title="Collapse sidebar">‹</button>
+      </div>
+      <div id="sidebar-body"><!-- populated by sidebar.js --></div>
+    </aside>
+
+    <!-- ── Main ───────────────────────────────────────────────────────── -->
+    <main id="main">
+      <header id="top-bar">
+        <button id="sidebar-open" class="icon-btn" title="Open settings">☰</button>
+        <div>
+          <h1>💰 Personal Budget Dashboard</h1>
+          <p id="today-line"></p>
+        </div>
+      </header>
+
+      <div id="tabs-wrapper">
+        <div id="tab-nav" role="tablist">
+          <button class="tab-btn active" data-tab="current" role="tab">📅 Current Month</button>
+          <button class="tab-btn" data-tab="next" role="tab">🗓️ Next Month</button>
+          <button class="tab-btn" data-tab="savings" role="tab">🏦 Future Savings</button>
+        </div>
+
+        <div id="tab-panels">
+          <div id="panel-current" class="tab-panel active"></div>
+          <div id="panel-next"    class="tab-panel"></div>
+          <div id="panel-savings" class="tab-panel"></div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/state.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/charts.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/tab-current.js"></script>
+  <script src="js/tab-next.js"></script>
+  <script src="js/tab-savings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
