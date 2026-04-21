@@ -122,7 +122,7 @@ def _savings_overview() -> None:
 
     today = today_eastern()
     rows  = []
-    bal   = total_liquid
+    bal   = goal_balance
     for i in range(1, months_ahead + 1):
         future_month = (today.replace(day=1) + timedelta(days=32 * i)).replace(day=1)
         bal += monthly_save
